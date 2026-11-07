@@ -1,0 +1,23 @@
+[package]
+name = "grip-contract"
+version = "0.1.0"
+edition = "2021"
+description = "GRIP: an NEP-141 whose supply follows how much of its live float the community keeps locked."
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = "5"
+
+[dev-dependencies]
+near-sdk = { version = "5", features = ["unit-testing"] }
+
+[profile.release]
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = true
