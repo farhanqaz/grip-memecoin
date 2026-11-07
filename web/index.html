@@ -149,7 +149,10 @@ function drawChart(history, genesis) {
   if (!history.length) { svg.innerHTML = '<text x="10" y="40" fill="#6b7280" font-size="13">no epochs yet</text>'; return; }
   const W = 900, H = 260, pad = 34;
   const vals = history.map(h => Number(BigInt(h.supply) / 10n ** 12n) / 1e6);
-  const lo = Math.min(...vals, 9.5), hi = Math.max(...vals, 10.5);
+  // scale to the data, with genesis always in frame, and 0.5% breathing room
+  const base = Math.min(...vals, genesis), top = Math.max(...vals, genesis);
+  const padPct = Math.max((top - base) * 0.08, base * 0.001);
+  const lo = base - padPct, hi = top + padPct;
   const x = i => pad + (i * (W - pad * 2)) / Math.max(1, history.length - 1);
   const y = v => H - pad - ((v - lo) / (hi - lo || 1)) * (H - pad * 2);
   const line = vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
@@ -183,7 +186,7 @@ async function refresh() {
     document.getElementById('burns').textContent = s.burn_epochs;
     document.getElementById('epochline').textContent = `epoch ${s.epoch} · ${(Number(s.epoch_length_ns) / 1e9).toFixed(0)}s each`;
 
-    drawChart(s.history, 10);
+    drawChart(s.history, 10_000_000); // genesis in whole tokens, same units as the history array
 
     const rows = [...s.history].reverse().slice(0, 12).map(h => {
       const kind = h.action.split(' ')[0];

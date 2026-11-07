@@ -11,6 +11,8 @@ after deployment the only actor that decides supply is the community.
 Live on NEAR testnet: **[`grip-ee8642fb.testnet`](https://testnet.near.org/accounts/grip-ee8642fb.testnet)** ·
 dashboard: [`web/index.html`](web/index.html)
 
+![The dashboard reading the live contract](docs/dashboard.png)
+
 ## The mechanic
 
 ```text
