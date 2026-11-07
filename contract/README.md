@@ -49,7 +49,7 @@ The `owner` field is stored for provenance only. No method reads it.
 | `mint_bps` | 100 | 1% of supply per mint epoch |
 | `burn_bps` | 200 | 2% of supply per burn epoch |
 | `early_exit_bps` | 1000 | exiting a lock early burns 10% of it |
-| `epoch_length_ns` | 86,400e9 | 1 day in production; the testnet demo uses 60s |
+| `epoch_length_ns` | 86,400e9 | 1 day in production; the testnet demo uses 10s |
 
 ## Do this, see that
 

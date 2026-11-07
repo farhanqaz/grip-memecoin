@@ -1,0 +1,15 @@
+{
+  "name": "grip-demo",
+  "version": "1.0.0",
+  "description": "Deploy GRIP to NEAR testnet and run three scripted actors against it.",
+  "type": "module",
+  "scripts": {
+    "demo": "node deploy.mjs --fresh && node run.mjs",
+    "deploy": "node deploy.mjs",
+    "actors": "node run.mjs"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "near-api-js": "^7.4.0"
+  }
+}

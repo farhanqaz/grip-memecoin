@@ -1,4 +1,10 @@
+# build output
 target/
 node_modules/
-.env
 *.wasm
+
+# local deployment state: contains private keys, never commit it
+demo/demo-account.json
+
+# local env
+.env
