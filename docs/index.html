@@ -49,7 +49,20 @@
     display:flex;align-items:center;gap:24px;
     padding:20px var(--gut);
     mix-blend-mode:difference;
+    transition:background .28s ease,border-color .28s ease,padding .28s ease;
+    border-bottom:1px solid transparent;
   }
+  .top.solid{
+    mix-blend-mode:normal;
+    background:rgba(11,11,10,.86);
+    backdrop-filter:blur(16px) saturate(150%);
+    -webkit-backdrop-filter:blur(16px) saturate(150%);
+    border-bottom-color:var(--line);
+    padding-top:13px;padding-bottom:13px;
+  }
+  .top.solid .logo{color:var(--ink)}
+  .top.solid nav a{color:var(--muted)}
+  .top.solid nav a:hover{color:var(--ink)}
   .logo{
     display:flex;align-items:center;gap:9px;
     font-family:var(--serif);font-size:25px;letter-spacing:-.01em;line-height:1;
@@ -167,7 +180,7 @@
   }
 
   /* ---------------------------------------------------------- bands */
-  .band{padding:clamp(72px,12vh,140px) var(--gut)}
+  .band{padding:clamp(72px,12vh,140px) var(--gut);scroll-margin-top:84px}
   .band-in{max-width:1320px;margin:0 auto}
   .band-head{
     display:grid;grid-template-columns:64px 1fr auto;align-items:baseline;gap:20px;
@@ -267,12 +280,31 @@
   }
   .err.on{display:block}
 
+  /* entrance: the hero rises, once */
+  .js .hero > *{animation:rise .85s cubic-bezier(.2,.8,.2,1) both}
+  .js .hero > :nth-child(2){animation-delay:.06s}
+  .js .hero > :nth-child(3){animation-delay:.13s}
+  .js .hero > :nth-child(4){animation-delay:.2s}
+  .js .readout{animation:rise .9s cubic-bezier(.2,.8,.2,1) .28s both}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+  /* bands arrive when they are reached, not on a timer */
+  .js .band{opacity:0;transform:translateY(18px);transition:opacity .75s ease,transform .75s cubic-bezier(.2,.8,.2,1)}
+  .js .band.in{opacity:1;transform:none}
+
+  /* a live value pulses when it changes */
+  .readout .cell.flash .v{animation:flash .9s ease-out}
+  @keyframes flash{0%{color:var(--lime)}100%{color:var(--ink)}}
+
   @media (prefers-reduced-motion:reduce){
     *{animation:none!important;transition:none!important}
     .curve{stroke-dashoffset:0}
+    .js .band,.js .hero > *,.js .readout{opacity:1!important;transform:none!important}
   }
 </style>
 </head>
+<script>document.documentElement.classList.add("js")</script>
+
 <body>
 
 <header class="top">
@@ -528,6 +560,8 @@
   let W = 0, H = 0, DPR = 1;
   let pts = [], rings = [], mouseX = 0, mouseY = 0, targetMX = 0, targetMY = 0;
   let gripNow = 0, gripTarget = 0, gripInit = false, t0 = performance.now();
+  let textEdge = 0, spins = 0, spinVel = 0;
+  const shocks = [];
 
   const fib = (n) => {
     const out = [], ga = Math.PI * (3 - Math.sqrt(5));
@@ -553,11 +587,25 @@
     }
   };
 
+  // The sphere is placed against the measured right edge of the hero copy, so the two never
+  // share pixels at any width. Measured on resize and once the webfonts have settled.
+  const measure = () => {
+    if (window.innerWidth < 900) { textEdge = 0; return; }
+    const r = ['.hero h1', '.lede'].map((sel) => {
+      const el = document.querySelector(sel);
+      return el ? el.getBoundingClientRect().right : 0;
+    });
+    const acts = document.querySelector('.actions');
+    if (acts && acts.lastElementChild) r.push(acts.lastElementChild.getBoundingClientRect().right);
+    textEdge = Math.max.apply(null, r);
+  };
+
   const resize = () => {
     DPR = Math.min(2, window.devicePixelRatio || 1);
     W = cv.clientWidth; H = cv.clientHeight;
     cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
     cx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    measure();
   };
 
   const project = (p, R, rot) => {
@@ -583,20 +631,31 @@
     mouseX += (targetMX - mouseX) * 0.05;
     mouseY += (targetMY - mouseY) * 0.05;
 
-    cx0 = W * (W < 760 ? 0.5 : 0.64);
-    cy0 = H * (W < 760 ? 0.185 : 0.46);
-
-    const base = Math.min(W, H) * (W < 760 ? 0.23 : 0.31);
     const tight = 1.0 - 0.16 * gripNow;            // gripped: contracts
     const loose = 1.0 + 0.34 * (1 - gripNow);      // folding: disperses
-    const R = base * tight * loose;
+    const base = Math.min(W, H) * (W < 900 ? 0.24 : 0.275);
+    let R = base * tight * loose;
+
+    if (textEdge) {
+      const gap = 52, rightLimit = W - 30, reach = 1.16; // rings extend past the sphere radius
+      const avail = rightLimit - (textEdge + gap);
+      R = Math.min(R, Math.max(96, avail / (2 * reach)));
+      cx0 = textEdge + gap + R;
+      if (cx0 + R * reach > W - 18) { cx0 = W - 18 - R * reach; }
+      cy0 = H * 0.4;
+    } else {
+      cx0 = W * 0.5;
+      cy0 = H * 0.185;
+    }
 
     cx.clearRect(0, 0, W, H);
     cx.globalCompositeOperation = 'source-over';
 
+    spinVel *= 0.955;
+    spins += spinVel;
     const rot = {
       x: 0.48 + Math.sin(t * 0.22) * 0.16 + mouseY * 0.5,
-      y: t * 0.26 + mouseX * 0.9,
+      y: t * 0.26 + mouseX * 0.9 + spins,
     };
 
     const all = [];
@@ -633,6 +692,17 @@
       cx.beginPath();
       cx.arc(q.x, q.y, Math.max(0.4, size), 0, 6.2832);
       cx.fill();
+    }
+
+    // an epoch just rolled: send one ring out from the sphere
+    for (let i = shocks.length - 1; i >= 0; i -= 1) {
+      const p2 = (now - shocks[i]) / 1600;
+      if (p2 >= 1) { shocks.splice(i, 1); continue; }
+      cx.beginPath();
+      cx.arc(cx0, cy0, R * (1.02 + 0.62 * p2), 0, 6.2832);
+      cx.strokeStyle = 'rgba(203,255,77,' + (0.34 * (1 - p2) * (1 - p2)).toFixed(3) + ')';
+      cx.lineWidth = 1.2;
+      cx.stroke();
     }
 
     // a brighter core for the nearest points
@@ -806,6 +876,18 @@
     gripTarget = s.locked_share_bps / 10000;
     if (!gripInit) { gripNow = gripTarget; gripInit = true; }
 
+    const flash = (id, changed) => {
+      if (!changed) return;
+      const cell = $(id).closest('.cell');
+      cell.classList.remove('flash');
+      void cell.offsetWidth;
+      cell.classList.add('flash');
+    };
+    flash('vSupply', !!last && last.total_supply !== s.total_supply);
+    flash('vLocked', !!last && last.total_locked !== s.total_locked);
+    flash('vEpoch', !!last && last.epoch !== s.epoch);
+    if (last && last.epoch !== s.epoch) shocks.push(performance.now());
+
     countTo($('vSupply'), supply, 0);
     countTo($('vLocked'), locked, 0);
     countTo($('vReserve'), reserve, 0);
@@ -882,6 +964,31 @@
     catch (e) { $('copyBtn').textContent = 'Select it manually'; }
     setTimeout(() => { $('copyBtn').textContent = 'Copy the call'; }, 1800);
   });
+
+  const topBar = document.querySelector('.top');
+  const onScrollChrome = () => { topBar.classList.toggle('solid', window.scrollY > 48); };
+
+  let lastScroll = window.scrollY;
+  addEventListener('scroll', () => {
+    const dy = window.scrollY - lastScroll;
+    lastScroll = window.scrollY;
+    spinVel = Math.max(-0.55, Math.min(0.55, spinVel + dy * 0.0014));
+    onScrollChrome();
+  }, { passive: true });
+  onScrollChrome();
+
+  if (!reduced && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, { rootMargin: '0px 0px -12% 0px' });
+    document.querySelectorAll('.band').forEach((b) => io.observe(b));
+  } else {
+    document.querySelectorAll('.band').forEach((b) => b.classList.add('in'));
+  }
+
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
 
   build(); resize(); requestAnimationFrame(drawOrb); refresh();
   setInterval(refresh, 6000);
