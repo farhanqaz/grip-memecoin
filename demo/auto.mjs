@@ -27,12 +27,17 @@ const did = [];
 
 let s = await state();
 
-const dueAt = Number(BigInt(s.epoch_start) + BigInt(s.epoch_length_ns)) / 1e6;
-if (Date.now() >= dueAt) {
+// Catch up rather than tick once. A scheduled caller can be late by an hour, and a tick only rolls
+// MAX_EPOCHS_PER_TICK (12) epochs per call, so one late run has to be able to bring the chain current.
+const due = (st) => Date.now() >= Number(BigInt(st.epoch_start) + BigInt(st.epoch_length_ns)) / 1e6;
+let caught = 0;
+while (due(s) && caught < 120) {
   await account.callFunction({ contractId: accountId, methodName: 'tick', args: {}, gas: 100n * TGAS, waitUntil: 'FINAL' });
   s = await state();
-  did.push(`ticked to epoch ${s.epoch}`);
+  caught += 1;
 }
+if (caught) did.push(`ticked ${caught}x to epoch ${s.epoch}`);
+if (caught >= 120) did.push('still behind after 120 ticks');
 
 if (s.locked_share_bps < s.lock_target_bps) {
   const free = BigInt(await viewCall(accountId, 'ft_balance_of', { account_id: saved.accountId }));
