@@ -31,4 +31,4 @@ console.log(`locked for ${epochs} epochs`, res ? '' : '(no response)');
 
 const s = await viewCall(accountId, 'get_state');
 console.log(`grip ${(s.locked_share_bps / 100).toFixed(1)}% · epoch ${s.epoch} · supply ${Number(BigInt(s.total_supply) / 10n ** 18n).toLocaleString()}`);
-console.log(`dashboard: web/index.html?contract=${accountId}`);
+console.log(`dashboard: docs/index.html?contract=${accountId}`);

@@ -18,6 +18,9 @@ locked_share <= 35%  ->  burn 2% of supply, out of the reserve only
 otherwise            ->  nothing
 ```
 
+Locks are released automatically at their deadline, before the rule is evaluated: grip has to be
+maintained, not set once.
+
 Why `engaged` and not raw supply: 30% of genesis is minted into a contract-owned `reserve`, which is
 the coin's fixed deflation budget. It can only ever leave through the burn rule. Counting it as float
 would cap grip at 70% forever, so grip is measured on live float.
@@ -72,12 +75,12 @@ Expected from step 3 (60 epochs, 200 holders, fixed seeds — the numbers are re
 ```
 scenario    supply  mint  burn  skip
 grip         1.75x    58     1     0
-churn        1.18x    21     2     0
-fold         0.90x    18    15     4
+churn        1.17x    20     2     0
+fold         0.86x    15    15     4
 ```
 
 Read it as: if the community keeps 60%+ locked for 60 epochs, supply ends 75% higher and pays the
-lockers. If it folds, the reserve is spent down and supply ends 10% lower. Churn is roughly flat.
+lockers in unlocked tokens. If it folds, the reserve is spent down and supply ends 14% lower. Churn is roughly flat.
 
 ## Contract surface
 
@@ -87,9 +90,9 @@ lockers. If it folds, the reserve is spent down and supply ends 10% lower. Churn
 | `ft_transfer(receiver_id, amount)` | payable | unlocked balances only |
 | `ft_balance_of(account_id)` / `ft_total_supply()` / `ft_metadata()` | view | NEP-141 |
 | `lock(amount, epochs)` | call | moves unlocked balance into the lock; `epochs` 1..=30 |
-| `unlock()` | call | before the deadline burns `early_exit_bps` of it |
+| `unlock()` | call | before the deadline burns `early_exit_bps` of it; after it, a no-op (the tick already released it) |
 | `tick()` | call | permissionless epoch roll; applies the rule once per elapsed epoch (max 12 per call) |
-| `get_state()` | view | supply, reserve, engaged, locked share, params, last 90 epochs |
+| `get_state()` | view | supply, reserve, engaged, locked share, params, expiry count, last 90 epochs |
 | `locked_of(account_id)` / `until_epoch_of(account_id)` | view | a locker's settled position |
 
 Events follow NEP-297 (`EVENT_JSON:`) so an indexer can rebuild the log: `ft_transfer`, `ft_burn`,
@@ -112,17 +115,21 @@ These are deliberate trade-offs, not oversights:
    most ~1e-11 of a mint unassigned. `total_locked` can stay a few thousand yocto above the sum of
    individual locks forever; it is unsweepable and economically meaningless (bounded by `DUST` in the
    tests).
-4. **No sybil resistance.** Locking is per account, so a wallet farm could hold the share up. This is a
+4. **At most 32 concurrent lockers.** One `tick` releases every expired lock in a bounded loop, so the
+   locker list is capped at 32. A production contract would index expiries by epoch instead of scanning;
+   the cap is here so a tick can never run out of gas.
+5. **No sybil resistance.** Locking is per account, so a wallet farm could hold the share up. This is a
    mechanic demo; identity would be the next layer, and pretending otherwise would be worse than
    saying it.
-5. **No AMM or liquidity.** The token has no market in this repository on purpose — the track says the
+6. **No AMM or liquidity.** The token has no market in this repository on purpose — the track says the
    price chart does not count. The mechanic is demonstrated on testnet with scripted actors.
 
 ## Tests
 
-`cargo test` runs nine tests: genesis split, mint on grip, burn on fold, the reserve floor, early-exit
-penalty, free exit after the deadline, `tick` rate limiting, transfer isolation from locks, and the
-live-float denominator invariant.
+`cargo test` runs eleven tests: genesis split, mint on grip, burn on fold, the reserve floor, early-exit
+penalty, free exit after the deadline, `tick` rate limiting, transfer isolation from locks, the live-float
+denominator invariant, a lock expiring on its own and dragging grip down with it, and `unlock` after an
+expiry being a no-op.
 
 ## License
 

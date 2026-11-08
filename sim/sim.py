@@ -87,9 +87,11 @@ def run(p: Params, scen: str, seed: int = 11) -> dict:
         if share >= p.lock_target:
             amt = supply * p.mint_bps / 10000
             supply += amt
+            # The contract pays the mint out UNLOCKED, so the locked principal is untouched. Compounding
+            # it here would model a different contract than the one in contract/src/lib.rs.
             for h in holders:
                 if h.locked > 0:
-                    h.locked += amt * (h.locked / locked)
+                    h.free += amt * (h.locked / locked)
             mints += 1
         elif share <= p.burn_target:
             amt = min(supply * p.burn_bps / 10000, reserve)

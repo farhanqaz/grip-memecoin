@@ -23,6 +23,9 @@ use near_sdk::{env, near, AccountId, PanicOnDefault};
 const SCALE: u128 = 1_000_000_000_000; // 1e12, reward-per-locked-unit precision
 const MAX_HISTORY: usize = 90;
 const MAX_EPOCHS_PER_TICK: u64 = 12;
+/// Concurrent lockers a single tick can expire. Locks release themselves at their deadline, so grip has
+/// to be maintained rather than set once; a production contract would index expiries by epoch instead.
+const MAX_LOCKERS: usize = 32;
 
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Copy)]
@@ -62,6 +65,7 @@ pub struct State {
     pub early_exit_bps: u32,
     pub mint_epochs: u64,
     pub burn_epochs: u64,
+    pub expired_locks: u64,
     pub history: Vec<EpochRecord>,
 }
 
@@ -73,6 +77,7 @@ pub struct Grip {
     pub reserve: u128,
     pub balances: LookupMap<AccountId, u128>,
     pub locks: LookupMap<AccountId, Lock>,
+    pub lockers: Vec<AccountId>,
     pub total_locked: u128,
     pub acc: u128,
     pub epoch: u64,
@@ -85,6 +90,7 @@ pub struct Grip {
     pub early_exit_bps: u32,
     pub mint_epochs: u64,
     pub burn_epochs: u64,
+    pub expired_locks: u64,
     pub history: Vec<EpochRecord>,
 }
 
@@ -129,6 +135,7 @@ impl Grip {
             reserve,
             balances,
             locks: LookupMap::new(b"l"),
+            lockers: Vec::new(),
             total_locked: 0,
             acc: 0,
             epoch: 0,
@@ -141,6 +148,7 @@ impl Grip {
             early_exit_bps,
             mint_epochs: 0,
             burn_epochs: 0,
+            expired_locks: 0,
             history: Vec::new(),
         }
     }
@@ -151,8 +159,15 @@ impl Grip {
         U128(self.total_supply)
     }
 
+    /// Unlocked balance including rewards earned but not yet settled, so a holder can spend what they
+    /// have already earned without an extra transaction.
     pub fn ft_balance_of(&self, account_id: AccountId) -> U128 {
-        U128(self.balance_of(&account_id))
+        U128(self.balance_of(&account_id) + self.pending(&account_id))
+    }
+
+    /// Earned, not yet settled. Settling happens on the next lock, unlock or transfer.
+    pub fn pending_of(&self, account_id: AccountId) -> u128 {
+        self.pending(&account_id)
     }
 
     pub fn ft_metadata(&self) -> String {
@@ -165,6 +180,7 @@ impl Grip {
     pub fn ft_transfer(&mut self, receiver_id: AccountId, amount: U128) {
         let sender = env::predecessor_account_id();
         assert_ne!(sender, receiver_id, "self transfer");
+        self.settle(&sender);
         let from = self.balance_of(&sender);
         assert!(from >= amount.0, "not enough unlocked balance");
         self.set_balance(&sender, from - amount.0);
@@ -187,6 +203,10 @@ impl Grip {
         self.set_balance(&who, free - amount.0);
 
         let mut l = self.locks.get(&who).copied().unwrap_or(Lock { amount: 0, until_epoch: 0, debt: 0 });
+        if l.amount == 0 {
+            assert!(self.lockers.len() < MAX_LOCKERS, "too many concurrent lockers");
+            self.lockers.push(who.clone());
+        }
         let until = core::cmp::max(l.until_epoch, self.epoch + epochs);
         l.amount += amount.0;
         l.until_epoch = until;
@@ -201,11 +221,19 @@ impl Grip {
         ));
     }
 
-    /// Release a lock. Before its deadline this burns `early_exit_bps` of it.
+    /// Release a lock before its deadline and `early_exit_bps` of it is burned. After the deadline the
+    /// tick has already released it, so this is a no-op.
     pub fn unlock(&mut self) {
         let who = env::predecessor_account_id();
         self.settle(&who);
-        let l = self.locks.get(&who).copied().expect("no lock");
+        let Some(l) = self.locks.get(&who).copied() else {
+            env::log_str(&format!(
+                "EVENT_JSON:{{\"standard\":\"grip\",\"version\":\"1.0.0\",\"event\":\"unlock_noop\",\
+                 \"data\":[{{\"account_id\":\"{}\"}}]}}",
+                who
+            ));
+            return;
+        };
         assert!(l.amount > 0, "no lock");
 
         let early = self.epoch < l.until_epoch;
@@ -215,6 +243,7 @@ impl Grip {
         self.locks.remove(&who);
         self.total_locked -= l.amount;
         self.total_supply -= penalty;
+        self.lockers.retain(|a| a != &who);
         let free = self.balance_of(&who);
         self.set_balance(&who, free + released);
 
@@ -243,6 +272,10 @@ impl Grip {
         while now >= self.epoch_start + self.epoch_length_ns && rolled < MAX_EPOCHS_PER_TICK {
             self.epoch += 1;
             self.epoch_start += self.epoch_length_ns;
+            // Locks that reached their deadline stop counting before the rule is evaluated, so grip has
+            // to be maintained: an untouched lock decays into a burn epoch instead of holding the line
+            // forever.
+            self.expire_due_locks();
             self.apply_epoch_rule();
             rolled += 1;
         }
@@ -267,21 +300,14 @@ impl Grip {
             early_exit_bps: self.early_exit_bps,
             mint_epochs: self.mint_epochs,
             burn_epochs: self.burn_epochs,
+            expired_locks: self.expired_locks,
             history: self.history.clone(),
         }
     }
 
-    /// Settled lock size, including every mint this locker has earned but not yet claimed.
+    /// Locked principal. Mint rewards are paid out unlocked, so this never includes them.
     pub fn locked_of(&self, account_id: AccountId) -> U128 {
-        let Some(l) = self.locks.get(&account_id).copied() else {
-            return U128(0);
-        };
-        if l.amount == 0 {
-            return U128(0);
-        }
-        let entitled = l.amount * self.acc / SCALE;
-        let bonus = if entitled > l.debt { entitled - l.debt } else { 0 };
-        U128(l.amount + bonus)
+        U128(self.locks.get(&account_id).map(|l| l.amount).unwrap_or(0))
     }
 
     pub fn until_epoch_of(&self, account_id: AccountId) -> u64 {
@@ -302,6 +328,19 @@ impl Grip {
         ((self.total_locked.min(engaged) * 10_000) / engaged) as u32
     }
 
+    fn pending(&self, account: &AccountId) -> u128 {
+        let Some(l) = self.locks.get(account).copied() else { return 0 };
+        if l.amount == 0 {
+            return 0;
+        }
+        let entitled = l.amount * self.acc / SCALE;
+        if entitled > l.debt {
+            entitled - l.debt
+        } else {
+            0
+        }
+    }
+
     fn balance_of(&self, account: &AccountId) -> u128 {
         self.balances.get(account).copied().unwrap_or(0)
     }
@@ -310,7 +349,13 @@ impl Grip {
         self.balances.insert(account.clone(), amount);
     }
 
-    /// Move a locker's share of every mint since their last touch into their locked amount.
+    /// Move a locker's share of every mint since their last touch into their unlocked balance.
+    ///
+    /// Rewards land in `balances`, never inside the lock. Compounding them into `l.amount` would let an
+    /// unsettled locker's principal grow behind the accumulator's back, and then the pro-rata maths stops
+    /// being exact: the sum of positions drifts away from `total_locked`. Paying out unlocked keeps
+    /// `total_locked` equal to the sum of positions at all times, and it makes "you get paid for gripping"
+    /// literal rather than self-reinforcing.
     fn settle(&mut self, account: &AccountId) {
         let Some(mut l) = self.locks.get(account).copied() else { return };
         if l.amount == 0 {
@@ -318,10 +363,50 @@ impl Grip {
         }
         let entitled = l.amount * self.acc / SCALE;
         if entitled > l.debt {
-            l.amount += entitled - l.debt;
+            let owed = entitled - l.debt;
+            let free = self.balance_of(account);
+            self.set_balance(account, free + owed);
         }
         l.debt = l.amount * self.acc / SCALE;
         self.locks.insert(account.clone(), l);
+    }
+
+    /// Release every lock whose deadline has passed, returning the tokens to their holder unlocked.
+    /// Bounded by MAX_LOCKERS, so one tick can always finish.
+    fn expire_due_locks(&mut self) {
+        let mut i = 0;
+        while i < self.lockers.len() {
+            let account = self.lockers[i].clone();
+            let due = self
+                .locks
+                .get(&account)
+                .map(|l| l.until_epoch <= self.epoch)
+                .unwrap_or(true);
+            if !due {
+                i += 1;
+                continue;
+            }
+            if let Some(l) = self.locks.get(&account).copied() {
+                let entitled = l.amount * self.acc / SCALE;
+                if entitled > l.debt {
+                    let owed = entitled - l.debt;
+                    let free = self.balance_of(&account);
+                    self.set_balance(&account, free + owed);
+                }
+                let amount = l.amount;
+                self.locks.remove(&account);
+                self.total_locked = self.total_locked.saturating_sub(amount);
+                let free = self.balance_of(&account);
+                self.set_balance(&account, free + amount);
+                self.expired_locks += 1;
+                env::log_str(&format!(
+                    "EVENT_JSON:{{\"standard\":\"grip\",\"version\":\"1.0.0\",\"event\":\"lock_expired\",\
+                     \"data\":[{{\"account_id\":\"{}\",\"amount\":\"{}\",\"epoch\":{}}}]}}",
+                    account, amount, self.epoch
+                ));
+            }
+            self.lockers.swap_remove(i);
+        }
     }
 
     fn apply_epoch_rule(&mut self) {
@@ -330,8 +415,9 @@ impl Grip {
 
         if share_bps >= self.lock_target_bps && self.total_locked > 0 {
             let amount = self.total_supply * self.mint_bps as u128 / 10_000;
+            // The mint is paid out of the lock, so the locked principal does not change and
+            // `total_locked` stays exactly equal to the sum of positions.
             self.acc += amount * SCALE / self.total_locked;
-            self.total_locked += amount;
             self.total_supply += amount;
             self.mint_epochs += 1;
             action = format!("mint {}", amount);
@@ -449,13 +535,12 @@ mod tests {
         c.tick();
         assert_eq!(c.epoch, 1);
         assert_eq!(c.mint_epochs, 1);
-        // 1% of supply minted, all of it to the only locker.
+        // 1% of supply minted, all of it to the only locker — paid out unlocked.
         assert_eq!(c.total_supply, GENESIS + GENESIS / 100);
-        // Exact but for the accumulator's 1e-12 rounding, which is documented in the README.
-        let expected = GENESIS * 7 / 10 + GENESIS / 100;
-        let diff = c.locked_of(alice()).0.abs_diff(expected);
-        assert!(diff < DUST, "locked amount off by {diff} yocto");
-        assert!(c.total_locked - c.locked_of(alice()).0 < DUST, "dust must stay bounded");
+        assert_eq!(c.locked_of(alice()).0, GENESIS * 7 / 10, "principal is untouched by the mint");
+        assert_eq!(c.total_locked, GENESIS * 7 / 10, "locked total equals the sum of positions, exactly");
+        let paid = c.ft_balance_of(alice()).0;
+        assert!(paid.abs_diff(GENESIS / 100) < DUST, "the mint is spendable and paid out unlocked (got {paid})");
         assert_eq!(c.history.len(), 1);
         assert!(c.history[0].action.starts_with("mint"));
     }
@@ -509,10 +594,11 @@ mod tests {
         c.unlock();
 
         let penalty = locked * 1_000 / 10_000;
+        let reward = GENESIS / 100; // the only locker earned the whole mint when it settled
         assert_eq!(c.total_supply, supply_before - penalty);
-        assert!(c.total_locked < DUST, "only rounding dust may stay locked");
-        let diff = c.balance_of(&alice()).abs_diff(locked - penalty);
-        assert!(diff < DUST, "released amount off by {diff} yocto");
+        assert_eq!(c.total_locked, 0, "the lock is gone, and nothing was left behind");
+        let diff = c.balance_of(&alice()).abs_diff(locked - penalty + reward);
+        assert!(diff < DUST, "principal back, minus the burn, plus the reward (off by {diff})");
     }
 
     #[test]
@@ -556,6 +642,46 @@ mod tests {
             c.ft_transfer(bob(), U128(1));
         }));
         assert!(err.is_err());
+    }
+
+    #[test]
+    fn a_lock_expires_on_its_own_and_grip_falls_with_it() {
+        let mut c = deploy();
+        ctx(alice(), 0);
+        c.lock(U128(GENESIS * 7 / 10), 2); // whole live float, two epochs
+        assert_eq!(c.locked_share_bps(), 10_000);
+
+        ctx(bob(), EPOCH);
+        c.tick();
+        assert_eq!(c.mint_epochs, 1, "epoch 1 should mint");
+        assert_eq!(c.total_locked, GENESIS * 7 / 10, "the mint is paid out unlocked");
+
+        // epoch 2 is the deadline: the lock releases itself before the rule is evaluated
+        ctx(bob(), EPOCH * 2);
+        c.tick();
+        assert_eq!(c.expired_locks, 1, "the lock should expire without anyone unlocking");
+        assert_eq!(c.total_locked, 0, "the principal left the lock cleanly");
+        assert_eq!(c.locked_share_bps(), 0);
+        assert_eq!(c.burn_epochs, 1, "grip collapsed, so the burn fires");
+        assert!(c.balance_of(&alice()) > 0, "tokens went back to the holder unlocked");
+    }
+
+    #[test]
+    fn unlocking_after_your_lock_expired_is_a_no_op() {
+        let mut c = deploy();
+        ctx(alice(), 0);
+        c.lock(U128(GENESIS / 10), 1);
+
+        ctx(bob(), EPOCH);
+        c.tick();
+        assert_eq!(c.expired_locks, 1);
+
+        let supply_before = c.total_supply;
+        let free_before = c.balance_of(&alice());
+        ctx(alice(), EPOCH);
+        c.unlock(); // must not panic and must not burn anything
+        assert_eq!(c.total_supply, supply_before);
+        assert_eq!(c.balance_of(&alice()), free_before);
     }
 
     #[test]

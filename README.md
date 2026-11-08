@@ -8,7 +8,7 @@ live float its holders have locked. Lock up as a community and the token mints, 
 stayed. Fold, and it burns out of a fixed reserve. The deployer has no mint, no pause, and no setter —
 after deployment the only actor that decides supply is the community.
 
-Live on NEAR testnet: **[`grip-ee8642fb.testnet`](https://testnet.near.org/accounts/grip-ee8642fb.testnet)** ·
+Live on NEAR testnet: **[`grip-1682a584.testnet`](https://testnet.near.org/accounts/grip-1682a584.testnet)** ·
 dashboard: **[farhanqaz.github.io/grip-memecoin](https://farhanqaz.github.io/grip-memecoin/)** (source: [`docs/index.html`](docs/index.html))
 
 ![The dashboard reading the live contract](docs/dashboard.png)
@@ -20,6 +20,7 @@ engaged      = total_supply - reserve
 locked_share = total_locked / engaged
 
 locked_share >= 60%  ->  mint 1% of supply, pro-rata to whoever is locked
+                          (locks release at their own deadline, so grip has to be maintained)
 locked_share <= 35%  ->  burn 2% of supply, out of the reserve only
 otherwise            ->  nothing
 ```
@@ -37,7 +38,7 @@ asymmetry is what makes supply contract under churn instead of creeping up forev
 Four commands, no wallet, no keys needed for the first two.
 
 ```sh
-# 1. the contract's nine unit tests  (~1s, no network)
+# 1. the contract's eleven unit tests  (~1s, no network)
 cd contract && cargo test
 
 # 2. the supply study the parameters came from  (~1s, pure Python, no dependencies)
@@ -72,7 +73,7 @@ node keeper.mjs                          # ticks each due epoch; --once fits in 
 
 | Path | What it is | How to check it |
 | --- | --- | --- |
-| [`contract/`](contract) | the NEP-141 token and its epoch rule (Rust, `near-sdk` 5) | `cargo test` — 9 tests |
+| [`contract/`](contract) | the NEP-141 token and its epoch rule (Rust, `near-sdk` 5) | `cargo test` — 11 tests |
 | [`sim/`](sim) | 60-epoch supply study; the parameters were picked from a 108-combination sweep | `python3 sim/sim.py` |
 | [`demo/`](demo) | testnet deploy, three scripted actors, and the keeper | `cd demo && npm run demo` |
 | [`docs/`](docs) | static dashboard, served by GitHub Pages; one HTML file, no build step, no SDK | open it |
@@ -83,12 +84,12 @@ The study behind the numbers (60 epochs, 200 holders, fixed seeds, fully reprodu
 ```
 scenario    supply  mint  burn  skip
 grip         1.75x    58     1     0
-churn        1.18x    21     2     0
-fold         0.90x    18    15     4
+churn        1.17x    20     2     0
+fold         0.86x    15    15     4
 ```
 
 Grip means the community holds 60%+ locked for the whole window: supply ends 75% higher and every token
-of it goes to lockers. Fold means it decays: the reserve is spent down and supply ends 10% lower.
+of it goes to lockers. Fold means it decays: the reserve is spent down and supply ends 14% lower.
 
 ## The demo run
 
@@ -104,7 +105,7 @@ Any of these return the same numbers the dashboard shows, straight from the cont
 ```sh
 curl -s https://rpc.testnet.fastnear.com -X POST -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":"1","method":"query","params":{"request_type":"call_function",
-       "finality":"final","account_id":"grip-ee8642fb.testnet",
+       "finality":"final","account_id":"grip-1682a584.testnet",
        "method_name":"get_state","args_base64":"e30="}}'
 ```
 
@@ -114,6 +115,9 @@ reading of that array, not a separate index.
 
 ## Design notes worth arguing about
 
+- **Grip decays unless it is renewed.** A lock releases itself when its deadline passes, and that
+  happens *before* the epoch rule is evaluated. So a passive holder cannot freeze the metric above the
+  target forever: stop renewing and the next epoch reads a lower grip, then burns.
 - **The rule is permissionless, not autonomous.** `tick()` can be called by anyone and cannot be
   blocked. If nobody calls it, no epoch is evaluated; the next call rolls up to 12 elapsed epochs and
   applies the rule to each, so nothing is lost. A keeper is a 20-line script, deliberately kept

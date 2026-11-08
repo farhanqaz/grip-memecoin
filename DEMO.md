@@ -15,7 +15,7 @@ Have three things open and ready:
 1. a terminal at `near-hackathon/demo/`
 2. the dashboard in a browser: `cd docs && python3 -m http.server 8765`,
    then `http://localhost:8765/index.html`
-3. the contract on the explorer: `https://testnet.near.org/accounts/grip-ee8642fb.testnet`
+3. the contract on the explorer: `https://testnet.near.org/accounts/grip-1682a584.testnet`
 
 ## Shot list
 
@@ -41,7 +41,7 @@ GRIP makes supply a function of the one thing a community controls: how much of 
 No owner mint. No pause. No setters. The deployer's key has no power after deployment — on NEAR the rule
 is one permissionless method, tick(), that nobody can block or change.
 
-Built at NEAR HACKATHON. Contract on testnet: grip-ee8642fb.testnet · repo + 60-epoch supply study here:
+Built at NEAR HACKATHON. Contract on testnet: grip-1682a584.testnet · repo + 60-epoch supply study here:
 <link>
 
 What would make you trust a token like this: more lockers, or a longer lock?

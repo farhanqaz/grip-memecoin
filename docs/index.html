@@ -118,7 +118,7 @@
 const qs = new URLSearchParams(location.search);
 // ?contract=<account> and ?rpc=<url> let you point this page at any deployment of the same wasm.
 const RPC = qs.get('rpc') || 'https://rpc.testnet.fastnear.com';
-const CONTRACT = qs.get('contract') || 'grip-ee8642fb.testnet';
+const CONTRACT = qs.get('contract') || 'grip-1682a584.testnet';
 
 const fmt = (raw) => (Number(BigInt(raw) / 10n ** 12n) / 1e6).toLocaleString('en-US', { maximumFractionDigits: 2 });
 const pct = (bps) => (bps / 100).toFixed(1) + '%';
