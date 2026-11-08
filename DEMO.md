@@ -1,32 +1,48 @@
-# Recording the demo (target: 100 seconds, one take)
+# The demo
 
-The demo has to show **one complete moment**: a real user action ending in a visible on-chain result.
-No architecture slides, no setup.
+The demo is built, not acted out. `demo/demo.mp4` (85s, 3.3 MB) is assembled from three real sources:
 
-## Before you hit record
+| Layer | Where it comes from |
+| --- | --- |
+| Cards | `tools/film.py`, drawn with the page's own fonts |
+| Terminal | `tools/rec.py` recorded an actual `node run.mjs` against testnet, then `tools/cast2mp4.py` replayed it |
+| Dashboard | screenshots of the deployed page reading the same contract |
+
+Rebuild it:
 
 ```sh
-cd demo && npm install          # once
-cd ../contract && cargo build --release --target wasm32-unknown-unknown   # fresh wasm
+python3 tools/film.py demo/narration.mp3 demo/demo.mp4
 ```
 
-Have three things open and ready:
+Why a produced video and not a Loom take: X plays silently by default, so the key numbers have to be on
+screen as captions; the demo has to show two surfaces (terminal and dashboard) that one take struggles to
+hold; and a retake, a microphone, or a stumble all cost more than they add. If you want a human voice on
+top anyway, the script below is written for a 60 second screen-share.
 
-1. a terminal at `near-hackathon/demo/`
-2. the dashboard in a browser: `cd docs && python3 -m http.server 8765`,
-   then `http://localhost:8765/index.html`
-3. the contract on the explorer: `https://testnet.nearblocks.io/address/grip5391e9.grip-21a10e2e.testnet`
+## Optional: the Loom script (60s, if you want your own voice)
 
-## Shot list
+Share the dashboard at `https://farhanqaz.github.io/grip-memecoin/`, then read this. Square brackets are
+stage directions, not lines.
 
-| Time | On screen | Say (roughly) |
-| --- | --- | --- |
-| 0:00-0:12 | Dashboard, top numbers | "Every memecoin's supply is decided by its developer. Nothing the community does changes it. GRIP makes supply a function of the one thing a community actually controls: how much of the coin it keeps locked." |
-| 0:12-0:30 | The rule strip on the dashboard | "Lock 60% of the live float and the token mints 1%, paid to the lockers. Drop under 35% and it burns 2% out of a reserve, never out of holders' pockets. The deployer has no mint, no pause, no setter." |
-| 0:30-1:15 | Terminal: `npm run demo` | Let it print. Narrate the beats: genesis 10M / three actors funded / two lock past the target / an epoch rolls and supply goes 10,000,000 → 10,100,000, all of it to the lockers / carol exits early and 10% of her own lock is burned. |
-| 1:15-1:35 | Dashboard, refreshed | "Those are not local numbers. This page reads `get_state` off the contract over public RPC. Same supply, same grip, same epoch log, and the chart is the contract's own history array." |
-| 1:35-1:50 | Explorer tab | "The whole rule is one method on NEAR, `tick()`: permissionless, unblockable, callable by anyone. There is no admin key that can stop it or change the numbers." |
-| 1:50-2:00 | README / repo | "The parameters came from a 60-epoch simulation in the repo: 108 combinations swept, this set kept. Repo link below. What would make you trust a token like this: more lockers, or a longer lock?" |
+> **[dashboard open, hero visible]**
+> Every memecoin's supply is decided by whoever deployed it. Nothing the community does changes it.
+>
+> GRIP is a token on NEAR where supply follows one number: how much of the live float is locked.
+> **[point at the gauge]** Right now that is eighty eight percent, so this epoch is minting.
+>
+> Lock sixty percent and the token mints one percent, paid to the lockers. Fall under thirty five and it
+> burns two percent, out of a reserve the contract owns. **[scroll to the chart]** Every point here is an
+> epoch the contract applied, read straight off chain, no indexer.
+>
+> The part I care about: locks expire at their deadline, before the rule runs. So grip has to be
+> maintained, not set once. One person can't freeze it.
+>
+> There is no owner mint, no pause, no setters. `tick()` is permissionless, anyone can call it, nobody can
+> block it. The contract, eleven tests, and the sixty epoch study that picked these parameters are in the
+> repo.
+
+If you record it: 60 seconds max, no intro longer than one sentence, say the numbers you can point at, and
+post it with the same text as the draft below.
 
 ## The post
 
@@ -38,11 +54,11 @@ GRIP makes supply a function of the one thing a community controls: how much of 
 - lock 60% of the live float -> mints 1%, paid to the lockers
 - fall under 35% -> burns 2% from a reserve, never from holders' pockets
 
-No owner mint. No pause. No setters. The deployer's key has no power after deployment. On NEAR the rule
-is one permissionless method, tick(), that nobody can block or change.
+No owner mint. No pause. No setters. The deployer's key has no power after deployment, and on NEAR the
+rule is one permissionless method, tick(), that nobody can block or change.
 
-Built at NEAR HACKATHON. Contract on testnet: grip5391e9.grip-21a10e2e.testnet · repo + 60-epoch supply study here:
-<link>
+Built at NEAR HACKATHON. Contract on testnet: grip5391e9.grip-21a10e2e.testnet
+Repo + 60-epoch supply study: <repo link>
 
 What would make you trust a token like this: more lockers, or a longer lock?
 #NEARHackathon @NEARProtocol
@@ -50,9 +66,12 @@ What would make you trust a token like this: more lockers, or a longer lock?
 
 ## Checklist before posting
 
-- [ ] repo is **public** (`git status` clean, no `demo-account.json`, no keys)
-- [ ] `cargo test` prints 9 passed
-- [ ] `python3 sim/sim.py` prints the grip/churn/fold table
-- [ ] video is attached to the post (not a link only)
+
+- [ ] repo is **public** (`git status` clean, no `demo-account.json`, no `canonical-account.json`)
+- [ ] `./scripts/verify.sh` prints all checks passed
+- [ ] `cargo test` prints 11 passed
+- [ ] video is attached to the post, not just linked
 - [ ] post says "built at NEAR HACKATHON", tags @NEARProtocol, has #NEARHackathon
-- [ ] dashboard is reachable from a phone on mobile data (GitHub Pages is enough)
+- [ ] dashboard opens on a phone on mobile data, and the numbers are alive, not frozen
+- [ ] explorer link resolves in a normal browser (nearblocks, with near.rocks as the mirror)
+- [ ] the idea text in the submission form is under 2000 characters and matches the repo

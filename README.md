@@ -118,10 +118,11 @@ of it goes to lockers. Fold means it decays: the reserve is spent down and suppl
 
 ## The demo run
 
-The recorded run is [`demo/demo.mp4`](demo/demo.mp4) (68s, real testnet transactions). It is rebuilt, not
-acted out: `tools/rec.py` records the child process's own output with timestamps into `demo/demo.cast`, and
-`tools/cast2mp4.py` replays those timings into a video, so frame order and timing are whatever the run
-produced.
+The recorded run is [`demo/demo.mp4`](demo/demo.mp4) (85s). It is rebuilt, not acted out, in three layers:
+`tools/rec.py` records the child process's own output with timestamps into `demo/demo.cast`,
+`tools/cast2mp4.py` replays those timings into a video, and `tools/film.py` cuts that together with stills
+of the live dashboard and two cards. Frame order and timing are whatever the run produced; the editing only
+decides what you look at.
 
 ## Verify the deployment
 

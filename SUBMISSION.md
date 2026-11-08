@@ -7,7 +7,7 @@ An NEP-141 token on NEAR whose supply is a function of how much of its live floa
 | Track | `memecoins` (also entered under `social`) |
 | Repository | https://github.com/farhanqaz/grip-memecoin |
 | Live dashboard | https://farhanqaz.github.io/grip-memecoin/ |
-| Demo video (73s) | [`docs/demo.mp4`](docs/demo.mp4) |
+| Demo video (85s) | [`docs/demo.mp4`](docs/demo.mp4) |
 | Contract | `grip5391e9.grip-21a10e2e.testnet` |
 | Explorer | https://testnet.nearblocks.io/address/grip5391e9.grip-21a10e2e.testnet (mirror: https://near.rocks/address/grip5391e9.grip-21a10e2e.testnet) |
 | One command check | `./scripts/verify.sh` (also proves the deployed contract answers) |
