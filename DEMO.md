@@ -1,6 +1,6 @@
 # The demo
 
-`demo/demo.mp4` is 85 seconds and 5.3 MB. It is assembled from three real sources, not acted out:
+`docs/demo.mp4` is 85 seconds and 5.3 MB. It is assembled from three real sources, not acted out:
 
 | Layer | Where it comes from |
 | --- | --- |
@@ -12,7 +12,7 @@
 Rebuild it:
 
 ```sh
-python3 tools/film.py           # needs the cached audio in demo/lines/, and ffmpeg
+python3 tools/film.py           # writes docs/demo.mp4; needs demo/lines/ and ffmpeg
 python3 tools/film.py --fresh   # re-synthesise the voice (needs edge-tts)
 ```
 

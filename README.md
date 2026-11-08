@@ -8,7 +8,7 @@ nothing the community does changes it. The meme is decoration on top of a fixed 
 **What GRIP does.** Supply is a function of one measurable, verifiable thing: how much of the coin's
 live float its holders have locked. Lock up as a community and the token mints, paying the people who
 stayed. Fold, and it burns out of a fixed reserve. The deployer has no mint, no pause, and no setter.
-after deployment the only actor that decides supply is the community.
+After deployment the only actor that decides supply is the community.
 
 Live on NEAR testnet: **[`grip599cb0.grip-21a10e2e.testnet`](https://testnet.nearblocks.io/address/grip599cb0.grip-21a10e2e.testnet)** (mirror: [near.rocks](https://near.rocks/address/grip599cb0.grip-21a10e2e.testnet)) ·
 dashboard: **[farhanqaz.github.io/grip-memecoin](https://farhanqaz.github.io/grip-memecoin/)** (source: [`docs/index.html`](docs/index.html)) ·
@@ -80,13 +80,12 @@ The public deployment is driven by two small scripts so the dashboard is not a d
 the deployer lock its float as a stand-in community, and keeper.mjs calls the permissionless `tick()`
 when an epoch is due. Neither has any power the rule does not already give anyone.
 
-That keeper is a caller, not a component. Three callers are configured, and none of them is privileged:
+That keeper is a caller, not a component. Two callers are configured, and neither is privileged:
 
 | Caller | Cadence | Notes |
 | --- | --- | --- |
 | `worker/` on Cloudflare cron | every 5 minutes | [grip-keeper.grip-farhanqaz.workers.dev](https://grip-keeper.grip-farhanqaz.workers.dev), always on, no machine of ours involved |
 | `demo/keeper.mjs`, run locally | about a minute | finer granularity while a developer machine is up |
-| `.github/workflows/keeper.yml` | every 10 minutes | same script, GitHub's clock |
 
 The Worker talks to NEAR without an SDK: it borsh-encodes the transaction, signs it with Ed25519 through
 WebCrypto, and broadcasts. It costs about 0.0003 NEAR of gas per tick, which the demo account pays.
@@ -133,7 +132,7 @@ of it goes to lockers. Fold means it decays: the reserve is spent down and suppl
 
 ## The demo run
 
-The recorded run is [`demo/demo.mp4`](demo/demo.mp4) (85s). It is rebuilt, not acted out, in three layers:
+The recorded run is [`docs/demo.mp4`](docs/demo.mp4) (85s). It is rebuilt, not acted out, in three layers:
 `tools/rec.py` records the child process's own output with timestamps into `demo/demo.cast`,
 `tools/cast2mp4.py` replays those timings into a video, and `tools/film.py` cuts that together with stills
 of the live dashboard and two cards, retiming the terminal with a beat map so each beat lands under the

@@ -1,6 +1,6 @@
 """Build the demo film.
 
-    python3 tools/film.py            # builds demo/demo.mp4
+    python3 tools/film.py            # builds docs/demo.mp4
     python3 tools/film.py --fresh    # re-synthesises the voice
 
 One timeline, three sources, no hand-waving:
@@ -29,9 +29,9 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 FONTS = ROOT / "docs" / "fonts"
-STILLS = ROOT / "docs" / "film"
+STILLS = ROOT / "demo" / "stills"
 CACHE = ROOT / "demo" / "lines"
-OUT = ROOT / "demo" / "demo.mp4"
+OUT = ROOT / "docs" / "demo.mp4"   # the page serves docs/, so this is the artifact
 
 W, H = 1280, 720
 FPS = 25

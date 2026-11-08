@@ -1,6 +1,6 @@
 """Render an asciinema-style cast (the format tools/rec.py writes) into a real mp4.
 
-  python3 tools/cast2mp4.py demo/demo.cast demo/demo.mp4 --title "npm run demo"
+  python3 tools/cast2mp4.py demo/demo.cast /tmp/demo.mp4 --title "node run.mjs"
 
 It replays the recorded events at their original timestamps, so the video is a recording of the run,
 not a re-enactment: frame timing and line order are whatever the child process actually produced.

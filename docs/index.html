@@ -408,8 +408,8 @@
         </div>
       </div>
       <p class="note">
-        <b>Public demo instance.</b> The locked share above is one scripted account, renewed every 10
-        minutes by a keeper, not organic demand. An epoch here is <b>60 seconds</b>, not the 86,400 a
+        <b>Public demo instance.</b> The locked share above is one scripted account, renewed every 5
+        minutes by a keeper on Cloudflare, not organic demand. An epoch here is <b>60 seconds</b>, not the 86,400 a
         production deployment would use, so supply moves about 1,440x faster than it would in the wild.
         The rule is unchanged: no admin path exists, <b>lock()</b> and <b>tick()</b> are public methods.
       </p>
@@ -947,10 +947,12 @@
     }
     // an epoch that is overdue is not a broken page: tick() is public, and this says so instead of
     // pretending a countdown is still running.
+    // the keeper runs every 5 minutes, so between runs an epoch can be overdue. Saying so beats a
+    // countdown that sits at zero and looks stalled.
     const sub = $('sEpoch');
     if (sub) sub.textContent = left > 0
       ? 'next in ' + Math.ceil(left / 1000) + 's'
-      : (left < -epochLenMs ? 'due · anyone can call tick()' : 'epoch due');
+      : 'due · keeper runs every 5 min';
   };
 
   const render = (s) => {

@@ -71,7 +71,7 @@ else
 fi
 
 say "5. artefacts"
-for f in docs/index.html docs/demo.mp4 demo/demo.mp4 contract/README.md README.md; do
+for f in docs/index.html docs/demo.mp4 contract/README.md README.md DEMO.md; do
   if [ -s "$f" ]; then pass "$f"; else fail "$f missing or empty"; fi
 done
 
