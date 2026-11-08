@@ -10,7 +10,7 @@
 import { call, view } from "./near.js";
 
 const RPC = "https://rpc.testnet.fastnear.com";
-const MAX_TICKS_PER_RUN = 12; // one tick rolls up to 12 epochs on chain; keep the run inside the cron budget
+const MAX_TICKS_PER_RUN = 3; // enough for a 10 minute backlog, and it keeps the gas bill sane
 
 const due = (s) => Date.now() >= Number(BigInt(s.epoch_start) + BigInt(s.epoch_length_ns)) / 1e6;
 

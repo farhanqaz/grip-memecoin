@@ -256,6 +256,8 @@
   .act{display:inline-flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
   .act::before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
   .act.mint{color:var(--lime)} .act.burn{color:var(--orange)} .act.hold{color:var(--faint)}
+  /* the ceiling is its own outcome: the rule ran and had nothing to pay */
+  .act.capped{color:var(--muted);opacity:.75}
   .ledger .dim{color:var(--muted)}
   @media (max-width:640px){ .ledger .hide{display:none} }
 
@@ -997,7 +999,7 @@
 
     const rows = s.history.slice().reverse().slice(0, 9).map((h) => {
       const parts = (h.action || '').split(' ');
-      const kind = ['mint', 'burn', 'hold'].indexOf(parts[0]) >= 0 ? parts[0] : 'hold';
+      const kind = ['mint', 'burn', 'hold', 'capped'].indexOf(parts[0]) >= 0 ? parts[0] : 'hold';
       return '<tr>' +
         '<td class="ep">' + h.epoch + '</td>' +
         '<td><span class="act ' + kind + '">' + kind + '</span></td>' +
