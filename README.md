@@ -80,6 +80,11 @@ The public deployment is driven by two small scripts so the dashboard is not a d
 the deployer lock its float as a stand-in community, and keeper.mjs calls the permissionless `tick()`
 when an epoch is due. Neither has any power the rule does not already give anyone.
 
+That keeper is a caller, not a component: `.github/workflows/keeper.yml` runs the same script on GitHub's
+clock every ten minutes, so the live instance keeps advancing when the machine that built it is asleep. The
+published page and its numbers never depended on that machine at all: it is static HTML reading the chain
+from the visitor's browser.
+
 ```sh
 cd demo
 EPOCH_NS=60000000000 node deploy.mjs      # a public instance with 60s epochs

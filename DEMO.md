@@ -52,6 +52,19 @@ stage directions, not lines.
 If you record it: 60 seconds max, no intro longer than one sentence, say the numbers you can point at, and
 post it with the same text as the draft below.
 
+## Who ticks
+
+The rule is permissionless, not autonomous: an epoch only advances when someone calls `tick()`. Two
+callers are configured so the demo does not depend on one machine:
+
+| Caller | Cadence | Why |
+| --- | --- | --- |
+| `demo/keeper.mjs`, run locally | about a minute | keeps the live numbers moving smoothly |
+| `.github/workflows/keeper.yml` | every ten minutes | keeps them moving when that machine is off |
+
+Both call the same two public methods. The signing key has no power over the contract: there is no admin
+method, no pause, no setter, no upgrade path.
+
 ## The post
 
 ```text
