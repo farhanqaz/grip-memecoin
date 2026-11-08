@@ -4,6 +4,8 @@ The demo is built, not acted out. `demo/demo.mp4` (85s, 3.3 MB) is assembled fro
 
 | Layer | Where it comes from |
 | --- | --- |
+| Voice | one TTS file per sentence, so cue times are measured, not estimated |
+| Subtitles | burned in, on the same timeline as the voice |
 | Cards | `tools/film.py`, drawn with the page's own fonts |
 | Terminal | `tools/rec.py` recorded an actual `node run.mjs` against testnet, then `tools/cast2mp4.py` replayed it |
 | Dashboard | screenshots of the deployed page reading the same contract |
@@ -11,8 +13,14 @@ The demo is built, not acted out. `demo/demo.mp4` (85s, 3.3 MB) is assembled fro
 Rebuild it:
 
 ```sh
-python3 tools/film.py demo/narration.mp3 demo/demo.mp4
+python3 tools/film.py           # narration is cached in demo/lines/
+python3 tools/film.py --fresh   # re-synthesise the voice
 ```
+
+Two things in the edit are deliberate. The terminal segment is retimed with a beat map, so each beat
+(genesis, the two locks, the mint, the early exit, the deadline burn) lands under the sentence that names
+it. And the dashboard stills move with a sub-pixel affine transform: ffmpeg's `zoompan` crops on integer
+pixels, which is why a zoom built on it judders.
 
 Why a produced video and not a Loom take: X plays silently by default, so the key numbers have to be on
 screen as captions; the demo has to show two surfaces (terminal and dashboard) that one take struggles to

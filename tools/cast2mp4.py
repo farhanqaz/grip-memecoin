@@ -24,10 +24,10 @@ ACCENT = (74, 222, 128)
 BAR = (18, 20, 23)
 
 W, H = 1280, 720
-FS = 17
-LH = 23
-COLS = 110
-ROWS = 28
+FS = 21
+LH = 27
+COLS = 84
+ROWS = 22
 PAD_X, PAD_TOP, BAR_H = 42, 62, 38
 
 
@@ -96,10 +96,31 @@ def main():
     ap.add_argument("--title", default="npm run demo")
     ap.add_argument("--audio", help="optional narration mp3; the video is padded to fit it")
     ap.add_argument("--min-duration", type=float, default=0.0)
+    ap.add_argument("--beats", help='pin cast timestamps to film timestamps: "0:0,7.8:1.5,46:30"')
     args = ap.parse_args()
 
     header, events = load(args.cast)
-    total = events[-1][0] + 2.5 if events else 3.0
+    cast_total = events[-1][0] + 2.5 if events else 3.0
+
+    # A beat map is piecewise linear: between two anchors the picture plays at whatever rate gets it to
+    # the next line on time. That is how the edit stays in sync with the voice without cutting content.
+    if args.beats:
+        pts = sorted(tuple(float(v) for v in a.split(":")) for a in args.beats.split(","))
+
+        def tmap(t):
+            if t <= pts[0][0]:
+                return pts[0][1]
+            for (a0, f0), (a1, f1) in zip(pts, pts[1:]):
+                if t <= a1:
+                    return f1 if a1 == a0 else f0 + (f1 - f0) * (t - a0) / (a1 - a0)
+            return pts[-1][1]
+    else:
+        pts = None
+
+        def tmap(t):
+            return t
+
+    total = tmap(cast_total)
     total = max(total, args.min_duration)
 
     tmp = tempfile.mkdtemp(prefix="cast2mp4-")
@@ -111,11 +132,12 @@ def main():
         if kind != "o":
             continue
         lines.extend(wrap(data))
-        nxt = events[i + 1][0] if i + 1 < len(events) else total
-        hold = max(0.05, nxt - t)
+        nxt = events[i + 1][0] if i + 1 < len(events) else cast_total
+        ft, fnxt = tmap(t), tmap(nxt)
+        hold = max(0.05, fnxt - ft)
         path = os.path.join(tmp, f"f{idx:05d}.png")
-        render(lines, args.title, t, total).save(path)
-        frames.append((path, hold, t))
+        render(lines, args.title, ft, total).save(path)
+        frames.append((path, hold, ft))
         idx += 1
 
     # tail: hold the final screen so the narration can finish

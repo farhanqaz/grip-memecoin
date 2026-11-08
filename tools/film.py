@@ -1,25 +1,48 @@
-"""Build the demo film: cards, the real recorded run, and stills of the live dashboard.
+"""Build the demo film.
 
-    python3 tools/film.py <narration.mp3> <out.mp4>
+    python3 tools/film.py            # builds demo/demo.mp4
+    python3 tools/film.py --fresh    # re-synthesises the voice
 
-Every moving part is real: the terminal segment is `tools/rec.py`'s capture of an actual testnet run,
-and the dashboard frames are screenshots of the deployed page reading the same contract. Nothing here is
-a mock; the editing only decides what you look at and when.
+One timeline, three sources, no hand-waving:
+
+  * the narration is synthesised one sentence at a time, so every cue time is measured instead of
+    estimated from word counts
+  * the recorded run (`demo/demo.cast`) is retimed with a beat map, so each beat lands under the sentence
+    that describes it
+  * the dashboard stills move with a sub-pixel affine transform rather than zoompan's integer crop,
+    which is what made the first cut judder
+
+Nothing is faked. The editing only decides what you look at, and when.
 """
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
+import time
+import wave
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
-FONT_DIR = ROOT / "docs" / "fonts"
+FONTS = ROOT / "docs" / "fonts"
+STILLS = ROOT / "docs" / "film"
+CACHE = ROOT / "demo" / "lines"
+OUT = ROOT / "demo" / "demo.mp4"
+
 W, H = 1280, 720
 FPS = 25
+SS = 1.6  # supersample factor for the zoomed stills
+
+VOICE = "en-US-AndrewNeural"
+RATE = "-4%"
+
+LEAD = 0.7      # silence before the first sentence
+GAP = 0.45      # between sentences
+TAIL = 3.0      # after the last one
 
 BG = (11, 11, 10)
 INK = (244, 241, 234)
@@ -27,47 +50,134 @@ MUTED = (142, 138, 128)
 FAINT = (93, 90, 84)
 LIME = (203, 255, 77)
 
-SERIF = str(FONT_DIR / "fraunces-300_700-normal.woff2")
-SANS = str(FONT_DIR / "archivo-400_600-normal.woff2")
-MONO = str(FONT_DIR / "ibm-plex-mono-400-normal.woff2")
+SERIF = str(FONTS / "fraunces-300_700-normal.woff2")
+SANS = str(FONTS / "archivo-400_600-normal.woff2")
+MONO = str(FONTS / "ibm-plex-mono-400-normal.woff2")
 
-CAST = ROOT / "demo" / "demo.cast"
-STILLS = ROOT / "docs" / "film"
+EDGE_TTS = shutil.which("edge-tts") or "/home/dell/.hermes/installs/e67bdb6da4dcb61a/environments/db7524008aac4608b6adfb57193fe637/venv/bin/edge-tts"
+
+# shot, source, line. `cast` entries carry the cast timestamp the sentence belongs to.
+SCRIPT = [
+    ("card1", None, "Every memecoin's supply is decided by whoever deployed it."),
+    ("card1", None, "GRIP makes supply follow the float that its holders keep locked."),
+
+    ("cast", 0.0, "This is a real run on NEAR testnet: three accounts, created and funded for gas."),
+    ("cast", 7.8, "Ten million tokens exist once, at genesis, and thirty percent of them go into a reserve."),
+    ("cast", 11.4, "The rest is handed out, so the float sits with the holders, not the deployer."),
+    ("cast", 22.9, "Two of them lock, and grip climbs past the sixty percent target."),
+    ("cast", 27.4, "The contract reads that number directly. No oracle, no backend."),
+    ("cast", 31.1, "The epoch rolls, and one percent of supply mints to both lockers, pro rata."),
+    ("cast", 35.7, "One actor exits early, and ten percent of her own lock is burned."),
+    ("cast", 40.0, "When the locks reach their deadline, grip collapses on its own, and the burn fires."),
+
+    ("still", "s1_hero.png", "This is the dashboard, reading the same contract."),
+    ("still", "s2_chart.png", "Every point here is an epoch the contract applied to itself, not an indexer."),
+    ("still", "s3_ledger.png", "Every mint and burn is a transaction you can open."),
+
+    ("card2", None, "No owner mint. No pause. No setters."),
+    ("card2", None, "tick() is permissionless: anyone can call it, and nobody can block it."),
+    ("card2", None, "Contract, eleven tests, and the sixty epoch study, are in the repository."),
+]
 
 
-def font(path, size, weight=None):
-    f = ImageFont.truetype(path, size)
-    if weight:
-        f.set_variation_by_axes([weight])
-    return f
+def font(path, size):
+    return ImageFont.truetype(path, size)
 
 
-def ring(draw, cx, cy, r, lit=4, segs=6, width=4):
-    """The GRIP mark: six segments, four lit."""
-    import math
-    gap = 14
-    span = 360 / segs - gap
+def run(cmd, quiet=True):
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.returncode != 0:
+        print("FAILED:", " ".join(str(c) for c in cmd)[:180])
+        print(r.stderr[-2500:])
+        raise SystemExit(1)
+    if not quiet and r.stdout.strip():
+        print(r.stdout.strip()[-600:])
+    return r
+
+
+def probe_duration(path):
+    out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                          "-of", "default=nw=1:nk=1", str(path)], capture_output=True, text=True).stdout
+    return float(out.strip())
+
+
+# ---------------------------------------------------------------- voice
+
+def synth(idx, text, fresh=False):
+    """One file per sentence, so cue times are measured, never guessed."""
+    CACHE.mkdir(parents=True, exist_ok=True)
+    mp3, wav = CACHE / f"{idx:02d}.mp3", CACHE / f"{idx:02d}.wav"
+    if fresh or not wav.exists():
+        # the edge endpoint drops requests now and then; a sentence is small enough to just ask again
+        last = None
+        for attempt in range(4):
+            try:
+                run([EDGE_TTS, "--voice", VOICE, f"--rate={RATE}", "--text", text,
+                     "--write-media", str(mp3)])
+                break
+            except SystemExit:
+                last = attempt
+                time.sleep(2 * (attempt + 1))
+        else:
+            raise SystemExit(f"tts failed for line {idx}: {text!r}")
+        run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(mp3), "-ar", "44100", "-ac", "1", str(wav)])
+    return wav
+
+
+def build_narration(lines, fresh=False):
+    """Concatenate the sentences with fixed gaps, in wav, and return their cue times."""
+    tmp = Path(tempfile.mkdtemp(prefix="narr-"))
+    parts = []
+    for i, text in enumerate(lines):
+        wav = synth(i, text, fresh)
+        with wave.open(str(wav)) as w:
+            parts.append((w.getparams(), w.readframes(w.getnframes())))
+
+    params = parts[0][0]
+    silence = b"\x00" * (int(params.framerate * GAP) * params.sampwidth)
+    lead = b"\x00" * (int(params.framerate * LEAD) * params.sampwidth)
+    tail = b"\x00" * (int(params.framerate * TAIL) * params.sampwidth)
+
+    cues, cursor = [], LEAD
+    body = [lead]
+    for i, (p, data) in enumerate(parts):
+        d = len(data) / (params.framerate * params.sampwidth)
+        cues.append((cursor, d))
+        body.append(data)
+        body.append(silence if i < len(parts) - 1 else tail)
+        cursor += d + GAP
+
+    out = tmp / "narration.wav"
+    with wave.open(str(out), "wb") as w:
+        w.setparams(params)
+        for chunk in body:
+            w.writeframes(chunk)
+    total = sum(len(c) for c in body) / (params.framerate * params.sampwidth)
+    return out, cues, total
+
+
+# ---------------------------------------------------------------- cards
+
+def ring(d, cx, cy, r, lit=4, segs=6, width=4):
+    span = 360 / segs - 14
     start = -90 - span / 2 + 30
     for i in range(segs):
         a0 = start + i * (360 / segs)
-        col = LIME if i < lit else (60, 60, 50)
-        draw.arc([cx - r, cy - r, cx + r, cy + r], a0, a0 + span, fill=col, width=width)
-    draw.ellipse([cx - 2, cy - 2, cx + 2, cy + 2], fill=LIME)
+        d.arc([cx - r, cy - r, cx + r, cy + r], a0, a0 + span,
+              fill=LIME if i < lit else (60, 60, 50), width=width)
+    d.ellipse([cx - 2, cy - 2, cx + 2, cy + 2], fill=LIME)
 
 
 def card_one(path):
     img = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(img)
     ring(d, 92, 92, 24, width=5)
-    d.text((130, 78), "grip", font=font(SERIF, 40, 600), fill=INK)
-
-    d.text((92, 236), "Supply follows", font=font(SERIF, 96, 500), fill=INK)
-    d.text((92, 344), "grip.", font=font(SERIF, 96, 500), fill=LIME)
-
-    d.text((96, 486), "Lock the float and the token mints.", font=font(SANS, 27, 400), fill=MUTED)
-    d.text((96, 524), "Fold and it burns.", font=font(SANS, 27, 400), fill=MUTED)
-
-    d.text((96, 618), "NEP-141  ·  NEAR TESTNET  ·  NO OWNER MINT", font=font(MONO, 15), fill=FAINT)
+    d.text((130, 78), "grip", font=font(SERIF, 40), fill=INK)
+    d.text((92, 236), "Supply follows", font=font(SERIF, 96), fill=INK)
+    d.text((92, 344), "grip.", font=font(SERIF, 96), fill=LIME)
+    d.text((96, 470), "Lock the float and the token mints.", font=font(SANS, 27), fill=MUTED)
+    d.text((96, 508), "Fold and it burns.", font=font(SANS, 27), fill=MUTED)
+    d.text((96, 566), "NEP-141  ·  NEAR TESTNET  ·  NO OWNER MINT", font=font(MONO, 15), fill=FAINT)
     img.save(path)
 
 
@@ -75,11 +185,9 @@ def card_two(path):
     img = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(img)
     ring(d, 92, 92, 24, width=5)
-    d.text((130, 78), "grip", font=font(SERIF, 40, 600), fill=INK)
-
-    d.text((92, 190), "No owner mint.", font=font(SERIF, 58, 500), fill=INK)
-    d.text((92, 254), "No pause. No setters.", font=font(SERIF, 58, 500), fill=INK)
-
+    d.text((130, 78), "grip", font=font(SERIF, 40), fill=INK)
+    d.text((92, 188), "No owner mint.", font=font(SERIF, 58), fill=INK)
+    d.text((92, 252), "No pause. No setters.", font=font(SERIF, 58), fill=INK)
     rows = [
         ("contract", "grip5391e9.grip-21a10e2e.testnet", LIME),
         ("tests", "11 passing, cargo test", INK),
@@ -88,134 +196,177 @@ def card_two(path):
         ("check", "./scripts/verify.sh", INK),
         ("repo", "github.com/farhanqaz/grip-memecoin", INK),
     ]
-    y = 372
+    y = 352
     for k, v, col in rows:
         d.text((96, y), k, font=font(MONO, 15), fill=FAINT)
         d.text((216, y - 2), v, font=font(MONO, 19), fill=col)
-        y += 42
-        d.line([(96, y - 12), (1184, y - 12)], fill=(28, 28, 26), width=1)
-
-    d.text((96, 654), "BUILT AT NEAR HACKATHON 2026  ·  TRACK MEMECOINS", font=font(MONO, 14), fill=FAINT)
+        y += 39
+        d.line([(96, y - 11), (1184, y - 11)], fill=(28, 28, 26), width=1)
+    d.text((96, 578), "BUILT AT NEAR HACKATHON 2026  ·  TRACK MEMECOINS", font=font(MONO, 14), fill=FAINT)
     img.save(path)
 
 
-def caption(path, text, sub=None):
-    """Full-frame transparent overlay: a line of text on a soft scrim, bottom left."""
-    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+# ---------------------------------------------------------------- motion
+
+def encode(frames, path):
+    """Pipe frames straight into x264: no intermediate PNGs, no filter graph to fight."""
+    p = subprocess.Popen(
+        ["ffmpeg", "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
+         "-s", f"{W}x{H}", "-r", str(FPS), "-i", "-", "-an",
+         "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p", str(path)],
+        stdin=subprocess.PIPE)
+    for im in frames:
+        p.stdin.write(im.convert("RGB").tobytes())
+    p.stdin.close()
+    p.wait()
+
+
+def zoom(src, start_scale, end_scale, seconds):
+    """Sub-pixel zoom: the affine source rect is fractional, so motion is smooth at any speed.
+
+    zoompan, which the first cut used, crops on integer pixels. That is exactly why it juddered.
+    """
+    im = Image.open(src).convert("RGB")
+    total = max(2, int(round(seconds * FPS)))
+    big = (int(W * SS), int(H * SS))
+    cx, cy = im.width / 2, im.height / 2
+    for n in range(total):
+        s = start_scale + (end_scale - start_scale) * (n / (total - 1))
+        a = 1.0 / (SS * s)
+        # at x=0 the source coordinate must be cx - (W/s)/2, and the step per output pixel is
+        # 1/(SS*s): anything else shifts the picture instead of framing it
+        ox, oy = cx - (big[0] / 2) * a, cy - (big[1] / 2) * a
+        frame = im.transform(big, Image.AFFINE, (a, 0, ox, 0, a, oy), resample=Image.BICUBIC)
+        yield frame.resize((W, H), Image.LANCZOS)
+
+
+# ---------------------------------------------------------------- subtitles
+
+def wrap_text(d, text, f, max_w):
+    lines, cur = [], ""
+    for w in text.split():
+        t = f"{cur} {w}".strip()
+        if d.textlength(t, font=f) > max_w and cur:
+            lines.append(cur)
+            cur = w
+        else:
+            cur = t
+    if cur:
+        lines.append(cur)
+    return lines
+
+
+def subtitle_band(text, path):
+    """1280x170 RGBA strip: one or two lines, centred, outlined so it reads on any frame."""
+    img = Image.new("RGBA", (W, 170), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    f = font(SANS, 30, 500)
-    fs = font(SANS, 21, 400)
-    pad = 26
-    tw = d.textlength(text, font=f)
-    sw = d.textlength(sub, font=fs) if sub else 0
-    box_w = max(tw, sw) + pad * 2
-    box_h = (86 if sub else 62)
-    x0, y0 = 64, H - box_h - 56
-    d.rounded_rectangle([x0, y0, x0 + box_w, y0 + box_h], radius=4, fill=(11, 11, 10, 232))
-    d.rectangle([x0, y0, x0 + 3, y0 + box_h], fill=LIME)  # a hairline, not a decoration
-    d.text((x0 + pad, y0 + 14), text, font=f, fill=INK)
-    if sub:
-        d.text((x0 + pad, y0 + 52), sub, font=fs, fill=MUTED)
+    f = font(SANS, 31)
+    lines = wrap_text(d, text, f, W - 240)
+    lh = 42
+    y = 170 - 30 - lh * len(lines)
+    for line in lines:
+        tw = d.textlength(line, font=f)
+        d.text(((W - tw) / 2, y), line, font=f, fill=(244, 241, 234, 255),
+               stroke_width=4, stroke_fill=(10, 10, 9, 240))
+        y += lh
     img.save(path)
 
 
-def run(cmd):
-    r = subprocess.run(cmd, capture_output=True, text=True)
-    if r.returncode != 0:
-        print("FAILED:", " ".join(cmd)[:200])
-        print(r.stderr[-2500:])
-        raise SystemExit(1)
-
-
-def still_segment(src, out, seconds, zoom="in"):
-    frames = int(seconds * FPS)
-    if zoom == "in":
-        z = f"min(1+0.0008*on,1.08)"
-    elif zoom == "out":
-        z = f"max(1.08-0.0008*on,1.0)"
-    else:
-        z = "1.04"
-    vf = (
-        f"scale=1400:-1,zoompan=z='{z}':d={frames}"
-        f":x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps={FPS},format=yuv420p"
-    )
-    run(["ffmpeg", "-y", "-loglevel", "error", "-loop", "1", "-i", str(src),
-         "-vf", vf, "-t", str(seconds), "-r", str(FPS),
-         "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p", str(out)])
-
-
-def hold_segment(src, out, seconds):
-    run(["ffmpeg", "-y", "-loglevel", "error", "-loop", "1", "-i", str(src),
-         "-t", str(seconds), "-r", str(FPS), "-vf", f"scale={W}:{H},format=yuv420p",
-         "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p", str(out)])
-
+# ---------------------------------------------------------------- the cut
 
 def main():
-    narration = Path(sys.argv[1])
-    out = Path(sys.argv[2])
+    fresh = "--fresh" in sys.argv
     tmp = Path(tempfile.mkdtemp(prefix="film-"))
 
-    # 1. cards
+    narration, cues, total = build_narration([t for _, _, t in SCRIPT], fresh)
+    starts = [c[0] for c in cues]
+    durs = [c[1] for c in cues]
+
+    def first(shot):
+        return min(starts[i] for i, e in enumerate(SCRIPT) if e[0] == shot)
+
+    cast_start = first("cast")
+    card2_start = first("card2")
+    still_i = [i for i, e in enumerate(SCRIPT) if e[0] == "still"]
+    bounds = [starts[i] for i in still_i] + [card2_start]
+
+    print(f"narration {total:.1f}s · {len(SCRIPT)} cues · cast shot {bounds[0] - cast_start:.1f}s")
+
+    # 1. opening card
     c1, c2 = tmp / "c1.png", tmp / "c2.png"
     card_one(c1)
     card_two(c2)
+    seg1 = tmp / "s1.mp4"
+    encode(zoom(c1, 1.0, 1.018, cast_start), seg1)
 
-    # 2. the recorded terminal run, silent, with captions laid over the exact beats
-    term = tmp / "term_silent.mp4"
-    run(["python3", str(ROOT / "tools" / "cast2mp4.py"), str(CAST), str(term),
-         "--title", "grip-hackathon/demo  ·  node run.mjs (NEAR testnet, live)"])
-
-    caps = [
-        (2.0, 8.6, "Three accounts, funded from genesis", "no wallet, no backend"),
-        (20.0, 27.0, "Two of them lock: grip 71%", "above the 60% target"),
-        (28.5, 35.0, "An epoch rolls: 1% mints to both lockers", "pro rata, paid out unlocked"),
-        (36.0, 40.6, "One actor exits early: 10% of her lock burns", "her own tokens, not anyone else's"),
-        (41.2, 46.5, "Locks hit their deadline: grip collapses, burn fires", "grip has to be maintained"),
-    ]
-    inputs = ["-i", str(term)]
-    filters = []
-    last = "[0:v]"
-    for i, (t0, t1, txt, sub) in enumerate(caps, start=1):
-        p = tmp / f"cap{i}.png"
-        caption(p, txt, sub)
-        inputs += ["-loop", "1", "-i", str(p)]
-        nxt = f"[v{i}]"
-        filters.append(f"{last}[{i}:v]overlay=0:0:enable='between(t,{t0},{t1})'{nxt}")
-        last = nxt
-    filters.append(f"{last}format=yuv420p[vout]")
-    seg2 = tmp / "seg2.mp4"
-    run(["ffmpeg", "-y", "-loglevel", "error"] + inputs +
-        ["-filter_complex", ";".join(filters), "-map", "[vout]",
-         "-r", str(FPS), "-t", "46.5", "-c:v", "libx264", "-preset", "medium", "-crf", "20",
+    # 2. the recorded run, retimed so every beat sits under the sentence that names it
+    beats = [(e[1], starts[i] - cast_start) for i, e in enumerate(SCRIPT) if e[0] == "cast"]
+    beats.append((46.0, bounds[0] - cast_start))
+    raw = tmp / "cast.mp4"
+    run(["python3", str(ROOT / "tools" / "cast2mp4.py"), str(ROOT / "demo" / "demo.cast"),
+         str(raw), "--title", "grip-hackathon/demo  ·  node run.mjs, live on NEAR testnet",
+         "--beats", ",".join(f"{a:.2f}:{b:.2f}" for a, b in beats)], quiet=False)
+    seg2 = tmp / "s2.mp4"
+    run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(raw), "-r", str(FPS), "-an",
+         "-vf", f"scale={W}:{H}", "-c:v", "libx264", "-preset", "medium", "-crf", "20",
          "-pix_fmt", "yuv420p", str(seg2)])
 
-    # 3. the live dashboard, three stills
-    seg3, seg4, seg5 = tmp / "seg3.mp4", tmp / "seg4.mp4", tmp / "seg5.mp4"
-    # settle rather than push in: a zoom that ends at 1.0 never crops the page, and these stills are dense
-    still_segment(STILLS / "s1_hero.png", seg3, 8.0, "out")
-    still_segment(STILLS / "s2_chart.png", seg4, 8.0, "out")
-    still_segment(STILLS / "s3_ledger.png", seg5, 6.0, "out")
+    # 3. the dashboard, one still per sentence, settling rather than pushing in
+    stills = []
+    for k, i in enumerate(still_i):
+        seg = tmp / f"still{k}.mp4"
+        encode(zoom(STILLS / SCRIPT[i][1], 1.055, 1.0, bounds[k + 1] - bounds[k]), seg)
+        stills.append(seg)
 
-    # 4. cards
-    seg1, seg6 = tmp / "seg1.mp4", tmp / "seg6.mp4"
-    hold_segment(c1, seg1, 7.5)
-    hold_segment(c2, seg6, 9.0)
+    # 4. closing card
+    seg4 = tmp / "s4.mp4"
+    encode(zoom(c2, 1.0, 1.015, total - card2_start), seg4)
 
-    # 5. concat, then lay the narration over it
+    # 5. picture, then subtitles, then voice
     liste = tmp / "list.txt"
-    parts = [seg1, seg2, seg3, seg4, seg5, seg6]
+    parts = [seg1, seg2] + stills + [seg4]
     liste.write_text("".join(f"file '{p}'\n" for p in parts))
     silent = tmp / "silent.mp4"
     run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(liste),
          "-c", "copy", str(silent)])
-    # pad the narration rather than cutting the picture: the closing card should sit in silence
-    run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(silent), "-i", str(narration),
-         "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-af", "apad=pad_dur=12", "-shortest", str(out)])
 
-    dur = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
-                          "-of", "default=nw=1:nk=1", str(out)], capture_output=True, text=True).stdout.strip()
-    print(f"{out}: {float(dur):.1f}s, {os.path.getsize(out)/1e6:.1f} MB, {len(parts)} segments")
-    print("frames kept in", tmp)
+    subl = tmp / "subs"
+    subl.mkdir()
+    blank = tmp / "blank.png"
+    Image.new("RGBA", (W, 170), (0, 0, 0, 0)).save(blank)
+    cue_png = {}
+    for i in range(len(cues)):
+        p = tmp / f"cue{i}.png"
+        subtitle_band(SCRIPT[i][2], p)
+        cue_png[i] = p
+
+    current = -2
+    for n in range(int(round(total * FPS))):
+        t = n / FPS
+        want = next((i for i, (s, d) in enumerate(cues) if s - 0.06 <= t < s + d + 0.12), None)
+        dst = subl / f"f{n:05d}.png"
+        if want != current:
+            shutil.copy(cue_png[want] if want is not None else blank, dst)
+            current = want
+        else:
+            try:
+                os.link(subl / f"f{n - 1:05d}.png", dst)
+            except OSError:
+                shutil.copy(subl / f"f{n - 1:05d}.png", dst)
+
+    burned = tmp / "burned.mp4"
+    run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(silent),
+         "-framerate", str(FPS), "-i", str(subl / "f%05d.png"),
+         "-filter_complex", "[0:v][1:v]overlay=0:550:format=auto,format=yuv420p",
+         "-c:v", "libx264", "-preset", "medium", "-crf", "20", str(burned)])
+
+    run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(burned), "-i", str(narration),
+         "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-shortest", str(OUT)])
+
+    print(f"{OUT.relative_to(ROOT)}: {probe_duration(OUT):.1f}s · {OUT.stat().st_size / 1e6:.1f} MB")
+    for i, (s, d) in enumerate(cues):
+        print(f"  {s:6.2f} +{d:4.2f}  {SCRIPT[i][0]:6s} {SCRIPT[i][2][:62]}")
+    print("workdir", tmp)
 
 
 if __name__ == "__main__":
