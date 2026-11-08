@@ -409,8 +409,9 @@
       </div>
       <p class="note">
         <b>Public demo instance.</b> The locked share above is one scripted account, renewed every 10
-        minutes by a keeper, not organic demand. The rule is unchanged: no admin path exists,
-        <b>lock()</b> and <b>tick()</b> are public methods.
+        minutes by a keeper, not organic demand. An epoch here is <b>60 seconds</b>, not the 86,400 a
+        production deployment would use, so supply moves about 1,440x faster than it would in the wild.
+        The rule is unchanged: no admin path exists, <b>lock()</b> and <b>tick()</b> are public methods.
       </p>
     </div>
   </section>

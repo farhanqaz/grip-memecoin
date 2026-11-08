@@ -61,18 +61,28 @@ fold       0.86x    15    15     the reserve is spent down, supply contracts
 
 ## Reading the chain without a browser
 
-Explorers render client-side and some of them block scripted fetches. The machine-checkable path is the
-RPC call that `scripts/verify.sh` already runs:
+Explorers render client-side and some of them block scripted fetches. The machine-checkable path is a
+view call, and the repo wraps it in one command:
 
 ```sh
-curl -s https://rpc.testnet.fastnear.com -X POST -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","id":"1","method":"query","params":{"request_type":"call_function",
-       "finality":"final","account_id":"grip5391e9.grip-21a10e2e.testnet",
-       "method_name":"get_state","args_base64":"e30="}}'
+./scripts/state.sh                    # get_state: supply, reserve, locked share, and every parameter
+./scripts/state.sh ft_metadata        # or any other view method
 ```
 
-It returns supply, reserve, locked share, every fixed parameter and the last 90 epochs, with no browser
-and no key.
+It prints the block height on stderr, so you can see the reading is fresh, and the decoded JSON on stdout.
+
+If you would rather do it by hand, this is the whole call, with no dependency beyond python3:
+
+```sh
+curl -sS https://rpc.testnet.fastnear.com -X POST -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":"1","method":"query","params":{"request_type":"call_function",
+       "finality":"final","account_id":"grip5391e9.grip-21a10e2e.testnet",
+       "method_name":"get_state","args_base64":"e30="}}' \
+| python3 -c "import sys,json;print(bytes(json.load(sys.stdin)['result']['result']).decode())"
+```
+
+Not `jq -r '.result.result\[\]' | awk '{printf "%c",$1}'`: that works on ASCII and silently mangles
+anything above byte 127 under gawk in a UTF-8 locale. `bytes()` drops each byte in as a byte.
 
 ## Known limits, stated plainly
 
