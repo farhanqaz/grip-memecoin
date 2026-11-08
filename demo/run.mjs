@@ -1,4 +1,4 @@
-// The demo: three actors, one epoch boundary, one early exit — on testnet, for real.
+// The demo: three actors, one epoch boundary, one early exit, on testnet, for real.
 //
 //   node run.mjs
 //

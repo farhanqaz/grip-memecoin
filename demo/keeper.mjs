@@ -1,11 +1,11 @@
 // Keeper: calls the permissionless tick() when an epoch is due.
 //
 //   node keeper.mjs            # loop forever, one tick per due epoch
-//   node keeper.mjs --once     # one check, exit — use this from cron
+//   node keeper.mjs --once     # one check, exit, use this from cron
 //
 // The contract cannot tick itself and does not need anyone's permission to be ticked. This script is
 // the whole keeper: it holds no special key and has no power the burn rule does not already have.
-// If it stops, nothing is lost — the next tick rolls up to 12 elapsed epochs at once.
+// If it stops, nothing is lost: the next tick rolls up to 12 elapsed epochs at once.
 
 import { readFileSync } from 'node:fs';
 import { JsonRpcProvider, Account } from 'near-api-js';

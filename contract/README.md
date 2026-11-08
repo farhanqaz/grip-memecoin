@@ -70,7 +70,7 @@ ls -lh target/wasm32-unknown-unknown/release/grip_contract.wasm
 cd ../sim && python3 sim.py
 ```
 
-Expected from step 3 (60 epochs, 200 holders, fixed seeds — the numbers are reproducible):
+Expected from step 3 (60 epochs, 200 holders, fixed seeds; the numbers are reproducible):
 
 ```
 scenario    supply  mint  burn  skip
@@ -97,7 +97,7 @@ lockers in unlocked tokens. If it folds, the reserve is spent down and supply en
 
 Events follow NEP-297 (`EVENT_JSON:`) so an indexer can rebuild the log: `ft_transfer`, `ft_burn`,
 `grip:lock`, `grip:unlock`, and `grip:epoch_mint` (the mint has many recipients, so it is not a
-single-account `ft_mint` — the event carries the amount, the supply after, and the share it was
+single-account `ft_mint`. The event carries the amount, the supply after, and the share it was
 earned on).
 
 ## Known limits, stated plainly
@@ -121,7 +121,7 @@ These are deliberate trade-offs, not oversights:
 5. **No sybil resistance.** Locking is per account, so a wallet farm could hold the share up. This is a
    mechanic demo; identity would be the next layer, and pretending otherwise would be worse than
    saying it.
-6. **No AMM or liquidity.** The token has no market in this repository on purpose — the track says the
+6. **No AMM or liquidity.** The token has no market in this repository on purpose: the track says the
    price chart does not count. The mechanic is demonstrated on testnet with scripted actors.
 
 ## Tests

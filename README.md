@@ -1,11 +1,11 @@
-# GRIP — a token whose supply follows grip
+# GRIP, a token whose supply follows grip
 
 **The problem.** Every memecoin has the same supply curve: the developer decides how much exists, and
 nothing the community does changes it. The meme is decoration on top of a fixed number.
 
 **What GRIP does.** Supply is a function of one measurable, verifiable thing: how much of the coin's
 live float its holders have locked. Lock up as a community and the token mints, paying the people who
-stayed. Fold, and it burns out of a fixed reserve. The deployer has no mint, no pause, and no setter —
+stayed. Fold, and it burns out of a fixed reserve. The deployer has no mint, no pause, and no setter.
 after deployment the only actor that decides supply is the community.
 
 Live on NEAR testnet: **[`grip5391e9.grip-21a10e2e.testnet`](https://testnet.near.org/accounts/grip5391e9.grip-21a10e2e.testnet)** ·
@@ -83,7 +83,7 @@ instance with `node run.mjs` after pointing `demo-account.json` at it.
 
 | Path | What it is | How to check it |
 | --- | --- | --- |
-| [`contract/`](contract) | the NEP-141 token and its epoch rule (Rust, `near-sdk` 5) | `cargo test` — 11 tests |
+| [`contract/`](contract) | the NEP-141 token and its epoch rule (Rust, `near-sdk` 5) | `cargo test`, 11 tests |
 | [`sim/`](sim) | 60-epoch supply study; the parameters were picked from a 108-combination sweep | `python3 sim/sim.py` |
 | [`demo/`](demo) | testnet deploy, three scripted actors, and the keeper | `cd demo && npm run demo` |
 | [`docs/`](docs) | static dashboard, served by GitHub Pages; one HTML file, no build step, no SDK | open it |
@@ -120,7 +120,7 @@ curl -s https://rpc.testnet.fastnear.com -X POST -H 'Content-Type: application/j
 ```
 
 `get_state` returns supply, reserve, engaged, locked share, every fixed parameter, and the last 90 epoch
-records (`epoch`, `action`, `share_bps`, `supply`, `timestamp`) — the dashboard's chart is a direct
+records (`epoch`, `action`, `share_bps`, `supply`, `timestamp`). The dashboard's chart is a direct
 reading of that array, not a separate index.
 
 ## Design notes worth arguing about
@@ -139,7 +139,7 @@ reading of that array, not a separate index.
 - **Everything is fixed at deployment.** No setters, no upgrade path, no `#[private]` methods. The
   contract's whole power is the rule above.
 
-Known limits — the ones a judge should hold us to — are listed in
+Known limits (the ones a judge should hold us to) are listed in
 [`contract/README.md`](contract/README.md#known-limits-stated-plainly): no sybil resistance, a finite
 burn budget, no AMM (the track says the price chart does not count), and the accumulator's 1e-12
 rounding dust.
@@ -157,8 +157,8 @@ rounding dust.
 
 ## Built for NEAR HACKATHON
 
-Track: `memecoins` (with `social`). Built 1–14 Nov 2026.
+Track: `memecoins` (with `social`). Built 1 to 14 Nov 2026.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).

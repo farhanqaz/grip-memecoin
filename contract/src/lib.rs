@@ -1,4 +1,4 @@
-//! GRIP — a token whose supply follows how much of its live float the community keeps locked.
+//! GRIP, a token whose supply follows how much of its live float the community keeps locked.
 //!
 //! The whole mechanic is one immutable rule, evaluated once per epoch by anyone:
 //!
@@ -535,7 +535,7 @@ mod tests {
         c.tick();
         assert_eq!(c.epoch, 1);
         assert_eq!(c.mint_epochs, 1);
-        // 1% of supply minted, all of it to the only locker — paid out unlocked.
+        // 1% of supply minted, all of it to the only locker, paid out unlocked.
         assert_eq!(c.total_supply, GENESIS + GENESIS / 100);
         assert_eq!(c.locked_of(alice()).0, GENESIS * 7 / 10, "principal is untouched by the mint");
         assert_eq!(c.total_locked, GENESIS * 7 / 10, "locked total equals the sum of positions, exactly");
