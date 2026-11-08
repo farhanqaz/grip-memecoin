@@ -1,3 +1,5 @@
+<p align="left"><img src="docs/logo.svg" width="64" height="64" alt="GRIP"></p>
+
 # GRIP, a token whose supply follows grip
 
 **The problem.** Every memecoin has the same supply curve: the developer decides how much exists, and

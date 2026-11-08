@@ -6,11 +6,13 @@
 <title>grip</title>
 <meta name="description" content="A token on NEAR whose supply follows how much of the live float its holders keep locked." />
 <meta name="theme-color" content="#0b0b0a" />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
 <style>
-  @font-face{font-family:'Instrument Serif';src:url('fonts/instrument-serif-400-normal.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
-  @font-face{font-family:'Instrument Serif';src:url('fonts/instrument-serif-400-italic.woff2') format('woff2');font-weight:400;font-style:italic;font-display:swap}
-  @font-face{font-family:'Instrument Sans';src:url('fonts/instrument-sans-var.woff2') format('woff2');font-weight:100 900;font-style:normal;font-display:swap}
-  @font-face{font-family:'JetBrains Mono';src:url('fonts/jetbrains-mono-var.woff2') format('woff2');font-weight:100 800;font-style:normal;font-display:swap}
+  @font-face{font-family:'Fraunces';src:url('fonts/fraunces-300_700-normal.woff2') format('woff2');font-weight:300 700;font-style:normal;font-display:swap}
+  @font-face{font-family:'Fraunces';src:url('fonts/fraunces-300_700-italic.woff2') format('woff2');font-weight:300 700;font-style:italic;font-display:swap}
+  @font-face{font-family:'Archivo';src:url('fonts/archivo-400_600-normal.woff2') format('woff2');font-weight:400 600;font-style:normal;font-display:swap}
+  @font-face{font-family:'IBM Plex Mono';src:url('fonts/ibm-plex-mono-400-normal.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+  @font-face{font-family:'IBM Plex Mono';src:url('fonts/ibm-plex-mono-500-normal.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap}
 
   :root{
     --bg:#0b0b0a;
@@ -23,9 +25,9 @@
     --lime:#cbff4d;
     --orange:#ff6a3d;
 
-    --serif:'Instrument Serif',Georgia,'Times New Roman',serif;
-    --sans:'Instrument Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
-    --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+    --serif:'Fraunces',Georgia,'Times New Roman',serif;
+    --sans:'Archivo',system-ui,-apple-system,'Segoe UI',sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
     --gut:clamp(18px,4vw,56px);
   }
   *{box-sizing:border-box}
@@ -38,6 +40,7 @@
   }
   a{color:inherit;text-decoration:none}
   ::selection{background:var(--lime);color:#0b0b0a}
+  :focus-visible{outline:2px solid var(--lime);outline-offset:3px}
   h1,h2,h3,p,figure{margin:0}
 
   /* ---------------------------------------------------------- top bar */
@@ -48,9 +51,12 @@
     mix-blend-mode:difference;
   }
   .logo{
-    font-family:var(--serif);font-size:24px;letter-spacing:.01em;line-height:1;
-    color:#fff;
+    display:flex;align-items:center;gap:9px;
+    font-family:var(--serif);font-size:25px;letter-spacing:-.01em;line-height:1;
+    color:#fff;font-weight:500;
   }
+  .logo .mark{width:19px;height:19px;display:block;transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+  .logo:hover .mark{transform:rotate(60deg)}
   .top nav{display:flex;gap:22px;margin-left:auto;align-items:center}
   .top nav a{
     font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
@@ -62,8 +68,8 @@
   /* ---------------------------------------------------------- stage */
   .stage{
     position:relative;min-height:100svh;
-    display:flex;flex-direction:column;justify-content:flex-end;
-    padding:110px var(--gut) 0;
+    display:flex;flex-direction:column;justify-content:space-between;
+    padding:96px var(--gut) 0;
     overflow:hidden;
   }
   #orb{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
@@ -73,7 +79,7 @@
       radial-gradient(120% 80% at 4% 96%, rgba(11,11,10,.96) 0%, rgba(11,11,10,.72) 38%, rgba(11,11,10,0) 68%),
       linear-gradient(180deg, rgba(11,11,10,.72) 0%, rgba(11,11,10,0) 22%);
   }
-  .stage-inner{position:relative;z-index:2;width:100%;max-width:1320px;margin:0 auto}
+  .stage-inner{position:relative;z-index:2;width:100%;max-width:1320px;margin:0 auto;display:flex;flex-direction:column;min-height:calc(100svh - 96px)}
   @media (max-width:760px){
     .scrim{
       background:
@@ -116,8 +122,9 @@
   .txt:hover{color:var(--ink);border-color:var(--ink)}
 
   /* live readout along the bottom of the stage */
+  .hero{margin-top:auto;padding-bottom:clamp(24px,6vh,64px)}
   .readout{
-    margin-top:clamp(40px,8vh,96px);
+    margin-top:0;
     border-top:1px solid var(--line);
     display:grid;grid-template-columns:112px repeat(4,minmax(0,1fr));
     align-items:center;gap:0;
@@ -246,6 +253,7 @@
     font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;color:var(--faint);text-transform:uppercase
   }
   footer a:hover{color:var(--ink)}
+  footer .foot{width:14px;height:14px;display:block;opacity:.85}
 
   .err{
     position:fixed;left:var(--gut);bottom:18px;z-index:40;display:none;
@@ -263,7 +271,7 @@
 <body>
 
 <header class="top">
-  <a class="logo" href="#top">grip</a>
+  <a class="logo" href="#top" aria-label="grip, home"><svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true"><g stroke="currentColor" stroke-width="3.6" stroke-linecap="butt"><path d="M17.34 5.08A11 11 0 0 1 24.78 9.38" opacity="1"/><path d="M26.13 11.70A11 11 0 0 1 26.13 20.30" opacity="1"/><path d="M24.78 22.62A11 11 0 0 1 17.34 26.92" opacity="1"/><path d="M14.66 26.92A11 11 0 0 1 7.22 22.62" opacity="1"/><path d="M5.87 20.30A11 11 0 0 1 5.87 11.70" opacity=".42"/><path d="M7.22 9.38A11 11 0 0 1 14.66 5.08" opacity=".42"/></g><circle cx="16" cy="16" r="2.1" fill="currentColor"/></svg>grip</a>
   <nav>
     <a class="opt" href="#rule">Rule</a>
     <a class="opt" href="#evidence">Evidence</a>
@@ -278,6 +286,7 @@
     <canvas id="orb" aria-hidden="true"></canvas>
     <div class="scrim"></div>
     <div class="stage-inner">
+      <div class="hero">
       <p class="kicker">NEP-141 on NEAR testnet</p>
       <h1>Supply follows <i>grip</i>.</h1>
       <p class="lede">
@@ -288,6 +297,7 @@
       <div class="actions">
         <a class="btn" href="#rule">Read the rule <span>&#8594;</span></a>
         <a class="txt" href="https://github.com/farhanqaz/grip-memecoin" target="_blank" rel="noreferrer">Contract and study</a>
+      </div>
       </div>
 
       <div class="readout" id="readout">
@@ -437,6 +447,14 @@
             contract's own history array. Nothing here is stored, so a reload re-reads the chain.</div>
           </div>
           <div class="fact">
+            <div class="k">Reproduce it</div>
+            <div class="v mono" style="font-size:11.5px;line-height:2">
+              cd contract &amp;&amp; cargo test<br />
+              cd sim &amp;&amp; python3 sim.py<br />
+              cd demo &amp;&amp; npm run demo
+            </div>
+          </div>
+          <div class="fact">
             <div class="k">Sources</div>
             <div class="v"><a href="https://github.com/farhanqaz/grip-memecoin" target="_blank" rel="noreferrer">Contract, 11 tests, 60 epoch supply study</a></div>
           </div>
@@ -448,7 +466,7 @@
 </main>
 
 <footer>
-  <span>Built at NEAR HACKATHON 2026 / track memecoins</span>
+  <span style="display:flex;align-items:center;gap:9px"><svg class="mark foot" viewBox="0 0 32 32" fill="none" aria-hidden="true"><g stroke="currentColor" stroke-width="3.6" stroke-linecap="butt"><path d="M17.34 5.08A11 11 0 0 1 24.78 9.38" opacity="1"/><path d="M26.13 11.70A11 11 0 0 1 26.13 20.30" opacity="1"/><path d="M24.78 22.62A11 11 0 0 1 17.34 26.92" opacity="1"/><path d="M14.66 26.92A11 11 0 0 1 7.22 22.62" opacity="1"/><path d="M5.87 20.30A11 11 0 0 1 5.87 11.70" opacity=".5"/><path d="M7.22 9.38A11 11 0 0 1 14.66 5.08" opacity=".5"/></g><circle cx="16" cy="16" r="2.1" fill="currentColor"/></svg> Built at NEAR HACKATHON 2026 / track memecoins</span>
   <span id="footAddr">&nbsp;</span>
   <span>MIT</span>
 </footer>
@@ -502,7 +520,7 @@
   const cx = cv.getContext('2d');
   let W = 0, H = 0, DPR = 1;
   let pts = [], rings = [], mouseX = 0, mouseY = 0, targetMX = 0, targetMY = 0;
-  let gripNow = 0, gripTarget = 0, t0 = performance.now();
+  let gripNow = 0, gripTarget = 0, gripInit = false, t0 = performance.now();
 
   const fib = (n) => {
     const out = [], ga = Math.PI * (3 - Math.sqrt(5));
@@ -516,7 +534,7 @@
   };
 
   const build = () => {
-    pts = fib(760).map((p, i) => ({ p, seed: Math.random(), ax: (Math.random() - .5), ay: (Math.random() - .5) }));
+    pts = fib(900).map((p, i) => ({ p, seed: Math.random(), ax: (Math.random() - .5), ay: (Math.random() - .5) }));
     rings = [];
     for (let k = 0; k < 3; k += 1) {
       const ring = [];
@@ -567,7 +585,7 @@
     const R = base * tight * loose;
 
     cx.clearRect(0, 0, W, H);
-    cx.globalCompositeOperation = 'lighter';
+    cx.globalCompositeOperation = 'source-over';
 
     const rot = {
       x: 0.48 + Math.sin(t * 0.22) * 0.16 + mouseY * 0.5,
@@ -595,10 +613,12 @@
 
     for (const q of all) {
       const depth = (q.z / R + 1) / 2;                 // 0 far, 1 near
-      const alpha = q.ring ? 0.1 + depth * 0.35 : 0.12 + depth * 0.8;
-      const size = (q.ring ? 0.9 : 1.1) * (0.6 + depth * 1.5) * q.s * (1 + gripNow * 0.25);
+      const alpha = q.ring ? 0.07 + depth * 0.22 : 0.2 + depth * 0.78;
+      const size = (q.ring ? 0.85 : 1.35) * (0.55 + depth * 1.6) * q.s * (1 + gripNow * 0.2);
       // colour: gripped is lime, folding drifts to orange
-      const mix = Math.min(1, Math.max(0, (1 - gripNow) * 0.85 + (1 - depth) * 0.25));
+      // hue is grip, brightness is depth. Above the 55% mark it stays lime; it only turns
+      // orange once the pool is actually folding toward the burn target.
+      const mix = Math.min(1, Math.max(0, (0.55 - gripNow) / 0.55));
       const r = Math.round(203 + (255 - 203) * mix);
       const g = Math.round(255 + (106 - 255) * mix);
       const b = Math.round(77 + (61 - 77) * mix);
@@ -633,7 +653,7 @@
     const large = to - from <= 180 ? 0 : 1;
     return 'M' + x1.toFixed(2) + ' ' + y1.toFixed(2) + ' A' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2.toFixed(2) + ' ' + y2.toFixed(2);
   };
-  const A0 = -125, A1 = 125;                       // sweep
+  const A0 = 225, A1 = 495;                       // 270 degree sweep, 90 degree gap centred at the bottom
   const at = (frac) => A0 + (A1 - A0) * frac;
 
   const drawDial = (gripBps, burnBps, mintBps) => {
@@ -680,6 +700,8 @@
       return '<line x1="' + x(i).toFixed(1) + '" y1="' + (Hc - B + 4) + '" x2="' + x(i).toFixed(1) + '" y2="' + (Hc - B + 12) + '" stroke="' + col + '" stroke-width="2"/>';
     }).join('');
 
+    chartGeo = { series, x, y, W: Wc, H: Hc, L, R, T, B };
+
     const last = series[series.length - 1];
     svg.innerHTML =
       grid +
@@ -690,7 +712,64 @@
       '<circle class="tip" cx="' + x(series.length - 1).toFixed(1) + '" cy="' + y(last.v).toFixed(1) + '" r="3.4"/>' +
       '<text class="axis" x="' + L + '" y="' + (Hc - B + 26) + '">ep ' + series[0].e + '</text>' +
       '<text class="axis" x="' + (Wc - R) + '" y="' + (Hc - B + 26) + '" text-anchor="end">ep ' + last.e + '</text>';
+    mountHover();
   };
+
+  /* ------------------------------------------------ chart hover */
+  let chartGeo = null;
+  const svgEl = $('chart');
+  let hoverLine = null, hoverDot = null, hoverTxt = null;
+
+  // drawChart replaces the whole svg, so the hover layer is rebuilt on every draw.
+  function mountHover() {
+    hoverLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    hoverLine.setAttribute('stroke', 'rgba(244,241,234,.35)');
+    hoverLine.setAttribute('stroke-width', '1');
+    hoverDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    hoverDot.setAttribute('r', '3.6');
+    hoverDot.setAttribute('fill', 'none');
+    hoverDot.setAttribute('stroke', 'var(--lime)');
+    hoverDot.setAttribute('stroke-width', '1.6');
+    hoverTxt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    hoverTxt.setAttribute('class', 'axis');
+    hoverTxt.setAttribute('text-anchor', 'middle');
+    [hoverLine, hoverDot, hoverTxt].forEach((el) => {
+      el.setAttribute('opacity', '0');
+      el.setAttribute('pointer-events', 'none');
+      svgEl.appendChild(el);
+    });
+  }
+
+  const onHover = (e) => {
+    if (!chartGeo || !chartGeo.series.length || e.pointerType === 'touch') return;
+    const box = svgEl.getBoundingClientRect();
+    const ux = ((e.clientX - box.left) / box.width) * chartGeo.W;
+    const { series, x, y, H, T, B } = chartGeo;
+    let best = 0, bestD = Infinity;
+    for (let i = 0; i < series.length; i += 1) {
+      const d = Math.abs(x(i) - ux);
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    if (!hoverLine) return;
+    const px = x(best).toFixed(1), py = y(series[best].v).toFixed(1);
+    hoverLine.setAttribute('x1', px); hoverLine.setAttribute('x2', px);
+    hoverLine.setAttribute('y1', T); hoverLine.setAttribute('y2', H - B);
+    hoverDot.setAttribute('cx', px); hoverDot.setAttribute('cy', py);
+    hoverTxt.setAttribute('x', px);
+    hoverTxt.setAttribute('y', Math.max(14, Number(py) - 14));
+    hoverTxt.textContent = 'ep ' + series[best].e + '  ' + fmt(series[best].v, 0);
+    hoverLine.setAttribute('opacity', '1');
+    hoverDot.setAttribute('opacity', '1');
+    hoverTxt.setAttribute('opacity', '1');
+  };
+  const onLeave = () => {
+    if (!hoverLine) return;
+    hoverLine.setAttribute('opacity', '0');
+    hoverDot.setAttribute('opacity', '0');
+    hoverTxt.setAttribute('opacity', '0');
+  };
+  svgEl.addEventListener('pointermove', onHover);
+  svgEl.addEventListener('pointerleave', onLeave);
 
   /* ------------------------------------------------ numbers that count up once */
   const counted = new Set();
@@ -706,6 +785,7 @@
       if (p < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
+    setTimeout(() => { el.firstChild.nodeValue = fmt(value, digits); }, 1400);
   };
 
   /* ------------------------------------------------ render */
@@ -717,6 +797,7 @@
     const reserve = dec(s.reserve);
     const float = Math.max(1, supply - reserve);
     gripTarget = s.locked_share_bps / 10000;
+    if (!gripInit) { gripNow = gripTarget; gripInit = true; }
 
     countTo($('vSupply'), supply, 0);
     countTo($('vLocked'), locked, 0);
