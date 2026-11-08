@@ -945,8 +945,12 @@
       fill.style.width = Math.max(0, Math.min(100, ratio * 100)).toFixed(1) + '%';
       fill.classList.toggle('armed', left <= 0);
     }
+    // an epoch that is overdue is not a broken page: tick() is public, and this says so instead of
+    // pretending a countdown is still running.
     const sub = $('sEpoch');
-    if (sub) sub.textContent = left <= 0 ? 'epoch due' : 'next in ' + Math.ceil(left / 1000) + 's';
+    if (sub) sub.textContent = left > 0
+      ? 'next in ' + Math.ceil(left / 1000) + 's'
+      : (left < -epochLenMs ? 'due · anyone can call tick()' : 'epoch due');
   };
 
   const render = (s) => {
