@@ -80,10 +80,19 @@ The public deployment is driven by two small scripts so the dashboard is not a d
 the deployer lock its float as a stand-in community, and keeper.mjs calls the permissionless `tick()`
 when an epoch is due. Neither has any power the rule does not already give anyone.
 
-That keeper is a caller, not a component: `.github/workflows/keeper.yml` runs the same script on GitHub's
-clock every ten minutes, so the live instance keeps advancing when the machine that built it is asleep. The
-published page and its numbers never depended on that machine at all: it is static HTML reading the chain
-from the visitor's browser.
+That keeper is a caller, not a component. Three callers are configured, and none of them is privileged:
+
+| Caller | Cadence | Notes |
+| --- | --- | --- |
+| `worker/` on Cloudflare cron | every 5 minutes | [grip-keeper.grip-farhanqaz.workers.dev](https://grip-keeper.grip-farhanqaz.workers.dev), always on, no machine of ours involved |
+| `demo/keeper.mjs`, run locally | about a minute | finer granularity while a developer machine is up |
+| `.github/workflows/keeper.yml` | every 10 minutes | same script, GitHub's clock |
+
+The Worker talks to NEAR without an SDK: it borsh-encodes the transaction, signs it with Ed25519 through
+WebCrypto, and broadcasts. It costs about 0.0003 NEAR of gas per tick, which the demo account pays.
+
+The published page never depended on any of this: it is static HTML reading the chain from the visitor's
+browser.
 
 ```sh
 cd demo

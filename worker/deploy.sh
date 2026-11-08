@@ -21,6 +21,9 @@ if ! npx wrangler whoami >/dev/null 2>&1; then
   exit 1
 fi
 
+# the Worker has to exist before it can hold secrets, so deploy first; secrets apply immediately after
+npx wrangler deploy
+
 npx wrangler secret put GRIP_SIGNER < "$KEY_FILE"
 
 if [ ! -f "$TOKEN_FILE" ]; then
@@ -28,8 +31,6 @@ if [ ! -f "$TOKEN_FILE" ]; then
   chmod 600 "$TOKEN_FILE"
 fi
 npx wrangler secret put TRIGGER_TOKEN < "$TOKEN_FILE"
-
-npx wrangler deploy
 echo
 echo "token for GET /run is in worker/$TOKEN_FILE"
 echo "test it with:  curl -H \"x-token: \$(cat worker/$TOKEN_FILE)\" https://grip-keeper.<your-subdomain>.workers.dev/run"

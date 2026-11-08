@@ -59,8 +59,9 @@ callers are configured so the demo does not depend on one machine:
 
 | Caller | Cadence | Why |
 | --- | --- | --- |
-| `demo/keeper.mjs`, run locally | about a minute | keeps the live numbers moving smoothly |
-| `.github/workflows/keeper.yml` | every ten minutes | keeps them moving when that machine is off |
+| `worker/` on Cloudflare cron | every 5 minutes | always on, independent of any laptop |
+| `demo/keeper.mjs`, run locally | about a minute | smoother numbers while a machine is up |
+| `.github/workflows/keeper.yml` | every 10 minutes | third layer, GitHub's clock |
 
 Both call the same two public methods. The signing key has no power over the contract: there is no admin
 method, no pause, no setter, no upgrade path.
