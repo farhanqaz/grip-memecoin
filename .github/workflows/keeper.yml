@@ -10,7 +10,10 @@ name: keeper
 
 on:
   schedule:
+    # two entries, offset, because GitHub's scheduler drops and delays single crons on quiet repos.
+    # the step itself catches up, so a late run is a delayed run, not a lost one.
     - cron: "*/10 * * * *"
+    - cron: "4,14,24,34,44,54 * * * *"
   workflow_dispatch:
 
 concurrency:
@@ -20,7 +23,7 @@ concurrency:
 jobs:
   tick:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
