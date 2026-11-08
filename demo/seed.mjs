@@ -11,7 +11,9 @@ import { JsonRpcProvider, Account } from 'near-api-js';
 import { viewCall } from './rpc.mjs';
 
 const TGAS = 1_000_000_000_000n;
-const { accountId, secretKey } = JSON.parse(readFileSync(new URL('./demo-account.json', import.meta.url), 'utf8'));
+const saved = JSON.parse(readFileSync(new URL(process.env.STATE_FILE || './demo-account.json', import.meta.url), 'utf8'));
+const { secretKey } = saved;
+const accountId = process.env.CONTRACT || saved.accountId;
 const epochs = Number(process.env.LOCK_EPOCHS || 30);
 
 const provider = new JsonRpcProvider({ url: 'https://rpc.testnet.fastnear.com' });

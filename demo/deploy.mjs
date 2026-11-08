@@ -12,7 +12,7 @@ import { KeyPair, JsonRpcProvider, Account } from 'near-api-js';
 import { viewCall } from './rpc.mjs';
 
 const WASM = new URL('../contract/target/wasm32-unknown-unknown/release/grip_contract.wasm', import.meta.url);
-const STATE = new URL('./demo-account.json', import.meta.url);
+const STATE = new URL(process.env.STATE_FILE || './demo-account.json', import.meta.url);
 const RPC = 'https://rpc.testnet.fastnear.com';
 const TGAS = 1_000_000_000_000n;
 

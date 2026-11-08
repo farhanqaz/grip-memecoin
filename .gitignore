@@ -11,3 +11,6 @@ demo/demo-account.json
 
 # generated narration (rebuild with tools/rec.py + text-to-speech)
 demo/narration.mp3
+
+# public deployment key, kept out of git like the demo key
+demo/canonical-account.json

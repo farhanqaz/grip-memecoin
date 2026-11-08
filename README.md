@@ -67,7 +67,15 @@ cd demo
 EPOCH_NS=60000000000 node deploy.mjs      # a public instance with 60s epochs
 LOCK_EPOCHS=30 node seed.mjs             # stand-in community locks for 30 epochs
 node keeper.mjs                          # ticks each due epoch; --once fits in cron
+
+# the keeper can drive any deployment: tick() is permissionless, the key only pays for gas
+CONTRACT=grip-1682a584.testnet node keeper.mjs
 ```
+
+If `deploy.mjs` answers `429 Rate limit exceeded`, the public testnet account helper is rate-limiting your
+IP (it allows a handful of throwaway accounts per day). Create a testnet account in a wallet, then run
+`STATE_FILE=./my-account.json node deploy.mjs` with that key in the same shape, or reuse an existing
+instance with `node run.mjs` after pointing `demo-account.json` at it.
 
 ## What is in here
 
