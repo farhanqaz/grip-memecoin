@@ -10,8 +10,9 @@ live float its holders have locked. Lock up as a community and the token mints, 
 stayed. Fold, and it burns out of a fixed reserve. The deployer has no mint, no pause, and no setter.
 after deployment the only actor that decides supply is the community.
 
-Live on NEAR testnet: **[`grip5391e9.grip-21a10e2e.testnet`](https://testnet.near.org/accounts/grip5391e9.grip-21a10e2e.testnet)** ·
-dashboard: **[farhanqaz.github.io/grip-memecoin](https://farhanqaz.github.io/grip-memecoin/)** (source: [`docs/index.html`](docs/index.html))
+Live on NEAR testnet: **[`grip5391e9.grip-21a10e2e.testnet`](https://testnet.nearblocks.io/address/grip5391e9.grip-21a10e2e.testnet)** ·
+dashboard: **[farhanqaz.github.io/grip-memecoin](https://farhanqaz.github.io/grip-memecoin/)** (source: [`docs/index.html`](docs/index.html)) ·
+one command check: **`./scripts/verify.sh`** · judge sheet: [`SUBMISSION.md`](SUBMISSION.md)
 
 ![The dashboard reading the live contract](docs/dashboard.png)
 
@@ -47,17 +48,29 @@ cd contract && cargo test
 
 # 2. the supply study the parameters came from  (~1s, pure Python, no dependencies)
 cd ../sim && python3 sim.py
+
+# 3. every claim in this README, including a read of the live contract  (~10s, needs curl)
+cd .. && ./scripts/verify.sh
 ```
+
+Step 3 is the one a reviewer should run: it re-runs the tests, rebuilds the wasm, re-runs the study, and
+then asks the deployed contract for `get_state`, so the numbers on this page are checked against the chain
+rather than taken on trust.
 
 ```sh
-# 3. deploy a throwaway testnet instance and run three scripted actors against it
-cd ../demo && npm install && node deploy.mjs && node run.mjs
+# 4. optional: deploy a fresh instance and run three scripted actors against it
+cd demo && npm install && npm run demo
 
-# 4. open the dashboard (it reads the same contract over public JSON-RPC)
+# 5. open the dashboard (it reads whatever contract you point it at)
 cd ../docs && python3 -m http.server 8765
-#   http://localhost:8765/index.html?contract=<account id from step 3>
-#   or use the hosted copy: https://farhanqaz.github.io/grip-memecoin/
+#   http://localhost:8765/index.html?contract=<account id from step 4>
+#   or the hosted copy: https://farhanqaz.github.io/grip-memecoin/
 ```
+
+Step 4 needs a funded testnet account. It mints a throwaway one through the public testnet helper, which
+rate-limits by IP: if it answers 429, either wait, or pass your own account with
+`STATE_FILE=./my-account.json node deploy.mjs` (same JSON shape, key and account id), or skip step 4
+entirely, since step 3 already proves the deployed contract works.
 
 Step 3 is the whole story in one run: genesis, two people locking past the 60% target, an epoch rolling
 and minting to the lockers, then one actor exiting early and burning 10% of their own lock.

@@ -152,7 +152,7 @@
   .dial .zone-burn{fill:none;stroke:var(--orange);stroke-width:5;stroke-linecap:round;opacity:.38}
   .dial .zone-mint{fill:none;stroke:var(--lime);stroke-width:5;stroke-linecap:round;opacity:.38}
   .dial .val{fill:none;stroke:var(--ink);stroke-width:5;stroke-linecap:round;transition:stroke-dashoffset .9s cubic-bezier(.2,.8,.2,1)}
-  .dial text{font-family:var(--mono);font-size:17px;font-weight:500;fill:var(--ink);text-anchor:middle}
+  .dial text{font-family:var(--mono);font-size:15px;font-weight:500;fill:var(--ink);text-anchor:middle}
   .dial .lab{font-size:8px;letter-spacing:.18em;fill:var(--faint)}
 
   @media (max-width:900px){
@@ -199,6 +199,7 @@
   #chart{display:block;width:100%;height:auto;margin-top:26px}
   .grid{stroke:rgba(244,241,234,.07);stroke-width:1}
   .axis{fill:var(--faint);font-family:var(--mono);font-size:10px;letter-spacing:.08em}
+  .hov{fill:var(--ink);paint-order:stroke;stroke:var(--bg);stroke-width:4;stroke-linejoin:round}
   .genesis{stroke:rgba(244,241,234,.18);stroke-width:1;stroke-dasharray:3 6}
   .curve{fill:none;stroke:var(--ink);stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.8s cubic-bezier(.3,.9,.2,1) forwards}
   @keyframes draw{to{stroke-dashoffset:0}}
@@ -275,6 +276,7 @@
   <nav>
     <a class="opt" href="#rule">Rule</a>
     <a class="opt" href="#evidence">Evidence</a>
+    <a class="opt" href="demo.mp4">Demo</a>
     <a class="opt" href="#verify">Verify</a>
     <a href="https://github.com/farhanqaz/grip-memecoin" target="_blank" rel="noreferrer">Repo</a>
   </nav>
@@ -296,7 +298,8 @@
       </p>
       <div class="actions">
         <a class="btn" href="#rule">Read the rule <span>&#8594;</span></a>
-        <a class="txt" href="https://github.com/farhanqaz/grip-memecoin" target="_blank" rel="noreferrer">Contract and study</a>
+        <a class="txt" href="demo.mp4">Watch the run, 73s</a>
+        <a class="txt" id="explorerTop" href="#" target="_blank" rel="noreferrer">Explorer</a>
       </div>
       </div>
 
@@ -412,8 +415,8 @@
             <th style="width:150px">Action</th>
             <th style="width:140px">Amount</th>
             <th style="width:100px" class="hide">Grip</th>
-            <th>Supply after</th>
-            <th style="width:110px" class="hide">Time</th>
+            <th style="width:190px">Supply after</th>
+            <th class="hide">Time</th>
           </tr>
         </thead>
         <tbody id="ledgerBody">
@@ -731,7 +734,7 @@
     hoverDot.setAttribute('stroke', 'var(--lime)');
     hoverDot.setAttribute('stroke-width', '1.6');
     hoverTxt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    hoverTxt.setAttribute('class', 'axis');
+    hoverTxt.setAttribute('class', 'axis hov');
     hoverTxt.setAttribute('text-anchor', 'middle');
     [hoverLine, hoverDot, hoverTxt].forEach((el) => {
       el.setAttribute('opacity', '0');
@@ -840,9 +843,10 @@
       '       "account_id":"' + CONTRACT + '","method_name":"get_state",\n' +
       '       "args_base64":"e30="}}\'</span>';
 
-    const url = 'https://testnet.near.org/accounts/' + CONTRACT;
+    const url = 'https://testnet.nearblocks.io/address/' + CONTRACT;
     $('cLink').textContent = CONTRACT;
     $('cLink').href = url;
+    $('explorerTop').href = url;
     $('footAddr').innerHTML = '<a href="' + url + '" target="_blank" rel="noreferrer" style="color:inherit">' + CONTRACT + '</a>';
     $('err').classList.remove('on');
     last = s;

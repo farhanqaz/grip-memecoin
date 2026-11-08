@@ -133,4 +133,4 @@ s = await state();
 show('5. next epoch', s);
 
 console.log(`\ncontract: ${CONTRACT}`);
-console.log(`explorer: https://testnet.near.org/accounts/${CONTRACT}`);
+console.log(`explorer: https://testnet.nearblocks.io/address/${CONTRACT}`);
