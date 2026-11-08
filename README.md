@@ -49,8 +49,9 @@ cd ../sim && python3 sim.py
 cd ../demo && npm install && node deploy.mjs && node run.mjs
 
 # 4. open the dashboard (it reads the same contract over public JSON-RPC)
-cd ../web && python3 -m http.server 8765
+cd ../docs && python3 -m http.server 8765
 #   http://localhost:8765/index.html?contract=<account id from step 3>
+#   or use the hosted copy: https://farhanqaz.github.io/grip-memecoin/
 ```
 
 Step 3 is the whole story in one run: genesis, two people locking past the 60% target, an epoch rolling
