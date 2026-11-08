@@ -13,7 +13,7 @@ cd ../contract && cargo build --release --target wasm32-unknown-unknown   # fres
 Have three things open and ready:
 
 1. a terminal at `near-hackathon/demo/`
-2. the dashboard in a browser: `cd web && python3 -m http.server 8765`,
+2. the dashboard in a browser: `cd docs && python3 -m http.server 8765`,
    then `http://localhost:8765/index.html`
 3. the contract on the explorer: `https://testnet.near.org/accounts/grip-ee8642fb.testnet`
 

@@ -9,7 +9,7 @@ stayed. Fold, and it burns out of a fixed reserve. The deployer has no mint, no 
 after deployment the only actor that decides supply is the community.
 
 Live on NEAR testnet: **[`grip-ee8642fb.testnet`](https://testnet.near.org/accounts/grip-ee8642fb.testnet)** ·
-dashboard: [`web/index.html`](web/index.html)
+dashboard: **[farhanqaz.github.io/grip-memecoin](https://farhanqaz.github.io/grip-memecoin/)** (source: [`docs/index.html`](docs/index.html))
 
 ![The dashboard reading the live contract](docs/dashboard.png)
 
@@ -74,7 +74,7 @@ node keeper.mjs                          # ticks each due epoch; --once fits in 
 | [`contract/`](contract) | the NEP-141 token and its epoch rule (Rust, `near-sdk` 5) | `cargo test` — 9 tests |
 | [`sim/`](sim) | 60-epoch supply study; the parameters were picked from a 108-combination sweep | `python3 sim/sim.py` |
 | [`demo/`](demo) | testnet deploy, three scripted actors, and the keeper | `cd demo && npm run demo` |
-| [`web/`](web) | static dashboard; one HTML file, no build step, no SDK | open it |
+| [`docs/`](docs) | static dashboard, served by GitHub Pages; one HTML file, no build step, no SDK | open it |
 | [`tools/`](tools) | local RPC proxy for networks that cannot reach a NEAR RPC | `node tools/rpc-proxy.mjs` |
 
 The study behind the numbers (60 epochs, 200 holders, fixed seeds, fully reproducible):
