@@ -6,7 +6,7 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-CONTRACT="${CONTRACT:-grip5391e9.grip-21a10e2e.testnet}"
+CONTRACT="${CONTRACT:-grip599cb0.grip-21a10e2e.testnet}"
 RPC="${RPC:-https://rpc.testnet.fastnear.com}"
 fails=0
 

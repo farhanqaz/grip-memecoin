@@ -52,6 +52,7 @@ The `owner` field is stored for provenance only. No method reads it.
 | `mint_bps` | 100 | 1% of supply per mint epoch |
 | `burn_bps` | 200 | 2% of supply per burn epoch |
 | `early_exit_bps` | 1000 | exiting a lock early burns 10% of it |
+| `max_supply` | 4x genesis | the mint stops here; see the note below |
 | `epoch_length_ns` | 86,400e9 | 1 day in production; the testnet demo uses 10s |
 
 ## Do this, see that
@@ -59,7 +60,7 @@ The `owner` field is stored for provenance only. No method reads it.
 Requires Rust with the wasm target: `rustup target add wasm32-unknown-unknown`.
 
 ```sh
-# 1. all nine unit tests, ~1s
+# 1. all twelve unit tests, ~1s
 cargo test
 
 # 2. build the contract a judge can deploy
@@ -108,6 +109,12 @@ These are deliberate trade-offs, not oversights:
    epoch is evaluated; the next call rolls up to 12 elapsed epochs at once and applies the rule per
    epoch, so nothing is lost, but a dormant token does not move on its own. A keeper is a 20-line
    script, deliberately kept off-chain so the mechanic has no privileged actor.
+2. **The mint is capped at 4x genesis.** A rule that pays 1% of the *current* supply every epoch
+   compounds without limit: at a 60 second epoch it passes u128 in about two days, and with overflow
+   checks on, `tick` would panic and the rule would never run again. The ceiling is why that cannot
+   happen. It is also why the history can show a `capped` row: the rule ran, it just had nothing to pay.
+   None of the studied scenarios reach 4x (the strongest is 1.75x), so the cap never binds in the sim.
+
 2. **The burn budget is finite.** The reserve is 30% of genesis. Once it is spent, a fold epoch can no
    longer burn, and the history records `hold` instead. `burn_can_never_take_more_than_the_reserve`
    pins this behaviour.
@@ -126,7 +133,7 @@ These are deliberate trade-offs, not oversights:
 
 ## Tests
 
-`cargo test` runs eleven tests: genesis split, mint on grip, burn on fold, the reserve floor, early-exit
+`cargo test` runs twelve tests: genesis split, mint on grip, burn on fold, the reserve floor, early-exit
 penalty, free exit after the deadline, `tick` rate limiting, transfer isolation from locks, the live-float
 denominator invariant, a lock expiring on its own and dragging grip down with it, and `unlock` after an
 expiry being a no-op.

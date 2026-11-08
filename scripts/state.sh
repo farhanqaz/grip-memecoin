@@ -14,7 +14,7 @@
 set -euo pipefail
 
 RPC="${RPC:-https://rpc.testnet.fastnear.com}"
-CONTRACT="${CONTRACT:-grip5391e9.grip-21a10e2e.testnet}"
+CONTRACT="${CONTRACT:-grip599cb0.grip-21a10e2e.testnet}"
 METHOD="${1:-get_state}"
 ARGS="${2:-{\}}"
 

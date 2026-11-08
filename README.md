@@ -10,7 +10,7 @@ live float its holders have locked. Lock up as a community and the token mints, 
 stayed. Fold, and it burns out of a fixed reserve. The deployer has no mint, no pause, and no setter.
 after deployment the only actor that decides supply is the community.
 
-Live on NEAR testnet: **[`grip5391e9.grip-21a10e2e.testnet`](https://testnet.nearblocks.io/address/grip5391e9.grip-21a10e2e.testnet)** (mirror: [near.rocks](https://near.rocks/address/grip5391e9.grip-21a10e2e.testnet)) ·
+Live on NEAR testnet: **[`grip599cb0.grip-21a10e2e.testnet`](https://testnet.nearblocks.io/address/grip599cb0.grip-21a10e2e.testnet)** (mirror: [near.rocks](https://near.rocks/address/grip599cb0.grip-21a10e2e.testnet)) ·
 dashboard: **[farhanqaz.github.io/grip-memecoin](https://farhanqaz.github.io/grip-memecoin/)** (source: [`docs/index.html`](docs/index.html)) ·
 one command check: **`./scripts/verify.sh`** · judge sheet: [`SUBMISSION.md`](SUBMISSION.md)
 
@@ -27,6 +27,7 @@ locked_share = total_locked / engaged
 locked_share >= 60%  ->  mint 1% of supply, pro-rata to whoever is locked
                           (locks release at their own deadline, so grip has to be maintained)
 locked_share <= 35%  ->  burn 2% of supply, out of the reserve only
+supply is capped at 4x genesis, so the mint cannot compound forever
 otherwise            ->  nothing
 ```
 
@@ -43,7 +44,7 @@ asymmetry is what makes supply contract under churn instead of creeping up forev
 Four commands, no wallet, no keys needed for the first two.
 
 ```sh
-# 1. the contract's eleven unit tests  (~1s, no network)
+# 1. the contract's twelve unit tests  (~1s, no network)
 cd contract && cargo test
 
 # 2. the supply study the parameters came from  (~1s, pure Python, no dependencies)
@@ -86,7 +87,7 @@ LOCK_EPOCHS=30 node seed.mjs             # stand-in community locks for 30 epoch
 node keeper.mjs                          # ticks each due epoch; --once fits in cron
 
 # the keeper can drive any deployment: tick() is permissionless, the key only pays for gas
-CONTRACT=grip5391e9.grip-21a10e2e.testnet node keeper.mjs
+CONTRACT=grip599cb0.grip-21a10e2e.testnet node keeper.mjs
 ```
 
 If `deploy.mjs` answers `429 Rate limit exceeded`, the public testnet account helper is rate-limiting your
@@ -98,7 +99,7 @@ instance with `node run.mjs` after pointing `demo-account.json` at it.
 
 | Path | What it is | How to check it |
 | --- | --- | --- |
-| [`contract/`](contract) | the NEP-141 token and its epoch rule (Rust, `near-sdk` 5) | `cargo test`, 11 tests |
+| [`contract/`](contract) | the NEP-141 token and its epoch rule (Rust, `near-sdk` 5) | `cargo test`, 12 tests |
 | [`sim/`](sim) | 60-epoch supply study; the parameters were picked from a 108-combination sweep | `python3 sim/sim.py` |
 | [`demo/`](demo) | testnet deploy, three scripted actors, and the keeper | `cd demo && npm run demo` |
 | [`docs/`](docs) | static dashboard, served by GitHub Pages; one HTML file, no build step, no SDK | open it |
@@ -132,7 +133,7 @@ Any of these return the same numbers the dashboard shows, straight from the cont
 ```sh
 curl -s https://rpc.testnet.fastnear.com -X POST -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":"1","method":"query","params":{"request_type":"call_function",
-       "finality":"final","account_id":"grip5391e9.grip-21a10e2e.testnet",
+       "finality":"final","account_id":"grip599cb0.grip-21a10e2e.testnet",
        "method_name":"get_state","args_base64":"e30="}}'
 ```
 

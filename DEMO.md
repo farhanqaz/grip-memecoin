@@ -46,7 +46,7 @@ stage directions, not lines.
 > maintained, not set once. One person can't freeze it.
 >
 > There is no owner mint, no pause, no setters. `tick()` is permissionless, anyone can call it, nobody can
-> block it. The contract, eleven tests, and the sixty epoch study that picked these parameters are in the
+> block it. The contract, twelve tests, and the sixty epoch study that picked these parameters are in the
 > repo.
 
 If you record it: 60 seconds max, no intro longer than one sentence, say the numbers you can point at, and
@@ -65,7 +65,7 @@ GRIP makes supply a function of the one thing a community controls: how much of 
 No owner mint. No pause. No setters. The deployer's key has no power after deployment, and on NEAR the
 rule is one permissionless method, tick(), that nobody can block or change.
 
-Built at NEAR HACKATHON. Contract on testnet: grip5391e9.grip-21a10e2e.testnet
+Built at NEAR HACKATHON. Contract on testnet: grip599cb0.grip-21a10e2e.testnet
 Repo + 60-epoch supply study: <repo link>
 
 What would make you trust a token like this: more lockers, or a longer lock?
@@ -77,7 +77,7 @@ What would make you trust a token like this: more lockers, or a longer lock?
 
 - [ ] repo is **public** (`git status` clean, no `demo-account.json`, no `canonical-account.json`)
 - [ ] `./scripts/verify.sh` prints all checks passed
-- [ ] `cargo test` prints 11 passed
+- [ ] `cargo test` prints 12 passed
 - [ ] video is attached to the post, not just linked
 - [ ] post says "built at NEAR HACKATHON", tags @NEARProtocol, has #NEARHackathon
 - [ ] dashboard opens on a phone on mobile data, and the numbers are alive, not frozen

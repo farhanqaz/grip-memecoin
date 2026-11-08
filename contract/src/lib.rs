@@ -11,6 +11,10 @@
 //! otherwise                   -> nothing
 //! ```
 //!
+//! The mint stops at `max_supply` (4x genesis). Without that ceiling a rule that pays a percentage of
+//! current supply every epoch compounds without limit: at a 60 second epoch it passes u128 in about two
+//! days, and because overflow checks are on, `tick` would panic and the rule would never run again.
+//!
 //! There is no owner mint, no pause, no setter, and no way to touch the reserve
 //! except the burn rule. After `new` returns, the deployer key has no power.
 //!
@@ -26,6 +30,10 @@ const MAX_EPOCHS_PER_TICK: u64 = 12;
 /// Concurrent lockers a single tick can expire. Locks release themselves at their deadline, so grip has
 /// to be maintained rather than set once; a production contract would index expiries by epoch instead.
 const MAX_LOCKERS: usize = 32;
+/// Hard ceiling on supply, in multiples of genesis. 1% per epoch of the *current* supply compounds, so
+/// an unbounded rule is a runaway by construction. Four genesis supplies leaves room for the sustained
+/// grip case in `sim/sim.py` (1.75x) and still bounds the thing.
+const MAX_SUPPLY_MULT: u128 = 4;
 
 #[near(serializers = [borsh, json])]
 #[derive(Clone, Copy)]
@@ -51,6 +59,7 @@ pub struct EpochRecord {
 #[derive(Clone)]
 pub struct State {
     pub total_supply: U128,
+    pub max_supply: U128,
     pub reserve: U128,
     pub engaged: U128,
     pub total_locked: U128,
@@ -74,6 +83,7 @@ pub struct State {
 pub struct Grip {
     pub owner: AccountId,
     pub total_supply: u128,
+    pub max_supply: u128,
     pub reserve: u128,
     pub balances: LookupMap<AccountId, u128>,
     pub locks: LookupMap<AccountId, Lock>,
@@ -132,6 +142,7 @@ impl Grip {
         Self {
             owner,
             total_supply: genesis.0,
+            max_supply: genesis.0.saturating_mul(MAX_SUPPLY_MULT),
             reserve,
             balances,
             locks: LookupMap::new(b"l"),
@@ -286,6 +297,7 @@ impl Grip {
     pub fn get_state(&self) -> State {
         State {
             total_supply: U128(self.total_supply),
+            max_supply: U128(self.max_supply),
             reserve: U128(self.reserve),
             engaged: U128(self.engaged()),
             total_locked: U128(self.total_locked),
@@ -414,21 +426,28 @@ impl Grip {
         let action;
 
         if share_bps >= self.lock_target_bps && self.total_locked > 0 {
-            let amount = self.total_supply * self.mint_bps as u128 / 10_000;
-            // The mint is paid out of the lock, so the locked principal does not change and
-            // `total_locked` stays exactly equal to the sum of positions.
-            self.acc += amount * SCALE / self.total_locked;
-            self.total_supply += amount;
-            self.mint_epochs += 1;
-            action = format!("mint {}", amount);
-            // Custom event on purpose: the recipients are many, so this is not a single-account
-            // ft_mint. Indexers get the exact supply delta plus the share it was earned on.
-            env::log_str(&format!(
-                "EVENT_JSON:{{\"standard\":\"grip\",\"version\":\"1.0.0\",\"event\":\"epoch_mint\",\
-                 \"data\":[{{\"amount\":\"{}\",\"supply\":\"{}\",\"locked_share_bps\":{},\
-                 \"lockers_amount\":\"{}\"}}]}}",
-                amount, self.total_supply, share_bps, self.total_locked
-            ));
+            let wanted = self.total_supply * self.mint_bps as u128 / 10_000;
+            let room = self.max_supply.saturating_sub(self.total_supply);
+            let amount = core::cmp::min(wanted, room);
+
+            if amount == 0 {
+                // The ceiling is reached. The rule still ran and still says so in the history, it just
+                // cannot pay: a quiet "hold" here would hide the ceiling from anyone reading the chain.
+                action = String::from("capped");
+            } else {
+                // The mint is paid out unlocked, so the locked principal does not change and
+                // `total_locked` stays exactly equal to the sum of positions.
+                self.acc += amount * SCALE / self.total_locked;
+                self.total_supply += amount;
+                self.mint_epochs += 1;
+                action = format!("mint {}", amount);
+                env::log_str(&format!(
+                    "EVENT_JSON:{{\"standard\":\"grip\",\"version\":\"1.0.0\",\"event\":\"epoch_mint\",\
+                     \"data\":[{{\"amount\":\"{}\",\"supply\":\"{}\",\"locked_share_bps\":{},\
+                     \"lockers_amount\":\"{}\"}}]}}",
+                    amount, self.total_supply, share_bps, self.total_locked
+                ));
+            }
         } else if share_bps <= self.burn_target_bps && self.reserve > 0 {
             let wanted = self.total_supply * self.burn_bps as u128 / 10_000;
             let amount = core::cmp::min(wanted, self.reserve);
@@ -543,6 +562,45 @@ mod tests {
         assert!(paid.abs_diff(GENESIS / 100) < DUST, "the mint is spendable and paid out unlocked (got {paid})");
         assert_eq!(c.history.len(), 1);
         assert!(c.history[0].action.starts_with("mint"));
+    }
+
+    #[test]
+    fn the_mint_stops_at_the_supply_ceiling() {
+        // Without this, 1% of the *current* supply every epoch compounds: at a 60 second epoch it passes
+        // u128 in about two days, and with overflow checks on, tick would panic and never run again.
+        let mut c = deploy();
+        let mut ts = 0;
+
+        // A lock lasts at most 30 epochs, so this is what a keeper does: renew, tick, renew. That also
+        // means the ceiling has to be reachable in real use, not only in theory.
+        for _ in 0..7 {
+            ctx(alice(), ts);
+            let free = c.ft_balance_of(alice()).0;
+            if free > 0 {
+                c.lock(U128(free), 30);
+            }
+            for _ in 0..30 {
+                ts += EPOCH;
+                ctx(alice(), ts);
+                c.tick();
+            }
+        }
+
+        assert_eq!(c.max_supply, GENESIS * 4);
+        assert_eq!(c.total_supply, c.max_supply, "supply stops at 4x genesis");
+        // the last row may be an expired-lock epoch, so look for the ceiling anywhere in the window
+        assert!(
+            c.history.iter().any(|h| h.action == "capped"),
+            "the ceiling is visible in the history: {:?}",
+            c.history.iter().map(|h| &h.action).collect::<Vec<_>>()
+        );
+
+        // still ticking, still recording: a cap is not a stop.
+        ts += EPOCH;
+        ctx(alice(), ts);
+        c.tick();
+        assert_eq!(c.total_supply, c.max_supply);
+        assert!(c.epoch > 200);
     }
 
     #[test]

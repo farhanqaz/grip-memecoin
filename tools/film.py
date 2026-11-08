@@ -76,7 +76,7 @@ SCRIPT = [
 
     ("card2", None, "No owner mint. No pause. No setters."),
     ("card2", None, "tick() is permissionless: anyone can call it, and nobody can block it."),
-    ("card2", None, "Contract, eleven tests, and the sixty epoch study, are in the repository."),
+    ("card2", None, "Contract, twelve tests, and the sixty epoch study, are in the repository."),
 ]
 
 
@@ -189,8 +189,8 @@ def card_two(path):
     d.text((92, 188), "No owner mint.", font=font(SERIF, 58), fill=INK)
     d.text((92, 252), "No pause. No setters.", font=font(SERIF, 58), fill=INK)
     rows = [
-        ("contract", "grip5391e9.grip-21a10e2e.testnet", LIME),
-        ("tests", "11 passing, cargo test", INK),
+        ("contract", "grip599cb0.grip-21a10e2e.testnet", LIME),
+        ("tests", "12 passing, cargo test", INK),
         ("study", "60 epochs, 108 parameter sets swept", INK),
         ("rule", "tick() is permissionless", INK),
         ("check", "./scripts/verify.sh", INK),
