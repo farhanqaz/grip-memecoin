@@ -8,10 +8,12 @@ live float its holders have locked. Lock up as a community and the token mints, 
 stayed. Fold, and it burns out of a fixed reserve. The deployer has no mint, no pause, and no setter —
 after deployment the only actor that decides supply is the community.
 
-Live on NEAR testnet: **[`grip-1682a584.testnet`](https://testnet.near.org/accounts/grip-1682a584.testnet)** ·
+Live on NEAR testnet: **[`grip5391e9.grip-21a10e2e.testnet`](https://testnet.near.org/accounts/grip5391e9.grip-21a10e2e.testnet)** ·
 dashboard: **[farhanqaz.github.io/grip-memecoin](https://farhanqaz.github.io/grip-memecoin/)** (source: [`docs/index.html`](docs/index.html))
 
 ![The dashboard reading the live contract](docs/dashboard.png)
+
+![Supply per epoch, read from the contract's own history array](docs/chart.png)
 
 ## The mechanic
 
@@ -69,7 +71,7 @@ LOCK_EPOCHS=30 node seed.mjs             # stand-in community locks for 30 epoch
 node keeper.mjs                          # ticks each due epoch; --once fits in cron
 
 # the keeper can drive any deployment: tick() is permissionless, the key only pays for gas
-CONTRACT=grip-1682a584.testnet node keeper.mjs
+CONTRACT=grip5391e9.grip-21a10e2e.testnet node keeper.mjs
 ```
 
 If `deploy.mjs` answers `429 Rate limit exceeded`, the public testnet account helper is rate-limiting your
@@ -113,7 +115,7 @@ Any of these return the same numbers the dashboard shows, straight from the cont
 ```sh
 curl -s https://rpc.testnet.fastnear.com -X POST -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":"1","method":"query","params":{"request_type":"call_function",
-       "finality":"final","account_id":"grip-1682a584.testnet",
+       "finality":"final","account_id":"grip5391e9.grip-21a10e2e.testnet",
        "method_name":"get_state","args_base64":"e30="}}'
 ```
 

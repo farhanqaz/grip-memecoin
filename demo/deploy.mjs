@@ -10,25 +10,12 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { KeyPair, JsonRpcProvider, Account } from 'near-api-js';
 import { viewCall } from './rpc.mjs';
+import { RPC, GENESIS_ARGS } from './params.mjs';
 
 const WASM = new URL('../contract/target/wasm32-unknown-unknown/release/grip_contract.wasm', import.meta.url);
 const STATE = new URL(process.env.STATE_FILE || './demo-account.json', import.meta.url);
-const RPC = 'https://rpc.testnet.fastnear.com';
 const TGAS = 1_000_000_000_000n;
 
-// Genesis parameters, identical to the set the simulation picked (see ../sim and ../contract/README.md).
-// epoch_length_ns is 10s here so a judge can watch an epoch turn over inside a two-minute demo;
-// production would use 86_400e9 (one day). Every other number is the real one.
-export const GENESIS_ARGS = {
-  genesis: '10000000000000000000000000', // 10M GRIP at 18 decimals
-  reserve_bps: 3000,
-  lock_target_bps: 6000,
-  burn_target_bps: 3500,
-  mint_bps: 100,
-  burn_bps: 200,
-  early_exit_bps: 1000,
-  epoch_length_ns: Number(process.env.EPOCH_NS || 10_000_000_000),
-};
 
 async function newTestnetAccount(provider) {
   const kp = KeyPair.fromRandom('ed25519');

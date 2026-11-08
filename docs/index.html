@@ -4,124 +4,485 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>GRIP — supply follows grip</title>
+<meta name="description" content="An NEP-141 token whose supply follows how much of its live float the community keeps locked. On NEAR testnet." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Source+Code+Pro:wght@400;500&display=swap" rel="stylesheet" />
 <style>
   :root{
-    --bg:#0b0c0e; --panel:#121417; --line:#22262b; --ink:#e8eaed; --dim:#8b929b;
-    --grip:#4ade80; --burn:#f87171; --mint:#60a5fa; --hold:#6b7280;
-    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --bg:#0b0c0d;
+    --raise:#121415;
+    --raise-2:#171a1c;
+    --line:#232628;
+    --line-2:#2e3234;
+    --line-3:#3a3f42;
+
+    --ink:#f4f5f5;
+    --ink-2:#b4b8ba;
+    --ink-3:#82888b;
+    --ink-4:#5f6467;
+
+    --green:#3ecf8e;
+    --green-dim:rgba(62,207,142,.14);
+    --green-line:rgba(62,207,142,.32);
+    --burn:#f87171;
+    --burn-dim:rgba(248,113,113,.12);
+    --burn-line:rgba(248,113,113,.3);
+
+    --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --mono:'Source Code Pro',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+
+    --r-sm:6px; --r-md:10px; --r-lg:16px; --pill:9999px;
+    --maxw:1140px;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
-  a{color:inherit}
-  .wrap{max-width:960px;margin:0 auto;padding:40px 24px 72px}
-  header{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:20px}
-  .brand{font-size:26px;font-weight:700;letter-spacing:-.02em}
-  .brand span{color:var(--grip)}
-  .sub{color:var(--dim);font-size:14px;margin-top:6px}
-  .addr{font-family:var(--mono);font-size:12px;color:var(--dim);word-break:break-all}
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:28px 0}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
-  .card .k{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
-  .card .v{font-size:26px;font-weight:650;margin-top:8px;letter-spacing:-.02em}
-  .card .n{font-size:12px;color:var(--dim);margin-top:4px}
-  .gripbar{height:6px;background:#1d2126;border-radius:99px;margin-top:12px;overflow:hidden;position:relative}
-  .gripbar i{display:block;height:100%;background:var(--grip);transition:width .4s}
-  .rule{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0 28px}
-  .rule div{background:var(--panel);border:1px solid var(--line);border-left:3px solid;border-radius:8px;padding:12px 14px;font-size:13px;color:var(--dim)}
-  .rule b{color:var(--ink);font-weight:600}
-  .rule .mint{border-left-color:var(--mint)}
-  .rule .burn{border-left-color:var(--burn)}
-  h2{font-size:13px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:32px 0 12px;font-weight:500}
-  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
-  svg{display:block;width:100%;height:auto}
-  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px}
-  th{text-align:left;color:var(--dim);font-weight:500;padding:6px 8px;border-bottom:1px solid var(--line);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
-  td{padding:7px 8px;border-bottom:1px solid #191c20}
-  tr:last-child td{border-bottom:0}
-  .tag{display:inline-block;padding:1px 7px;border-radius:99px;font-size:11px}
-  .tag.mint{background:rgba(96,165,250,.14);color:var(--mint)}
-  .tag.burn{background:rgba(248,113,113,.14);color:var(--burn)}
-  .tag.hold{background:rgba(107,114,128,.16);color:var(--hold)}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  pre{background:#0e1013;border:1px solid var(--line);border-radius:10px;padding:14px;overflow-x:auto;font-size:12px;color:#c9ced6;margin:0}
-  p{color:var(--dim);font-size:14px;line-height:1.65;margin:0 0 12px}
-  .err{color:var(--burn);font-size:13px}
-  @media(max-width:640px){.rule,.grid2{grid-template-columns:1fr}}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:var(--sans);font-weight:400;font-size:16px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  }
+  a{color:inherit;text-decoration:none}
+  ::selection{background:var(--green-dim);color:#fff}
+
+  .aura{position:fixed;inset:0;pointer-events:none;z-index:0}
+  .aura::before{
+    content:"";position:absolute;top:-420px;left:50%;transform:translateX(-50%);
+    width:1300px;height:820px;border-radius:50%;
+    background:radial-gradient(closest-side,rgba(62,207,142,.13),rgba(62,207,142,.05) 45%,transparent 72%);
+    filter:blur(12px);
+  }
+  .aura::after{
+    content:"";position:absolute;inset:0;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:64px 64px;opacity:.16;
+    mask-image:radial-gradient(ellipse 900px 520px at 50% 0%,#000 30%,transparent 75%);
+    -webkit-mask-image:radial-gradient(ellipse 900px 520px at 50% 0%,#000 30%,transparent 75%);
+  }
+  .shell{position:relative;z-index:1}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+
+  /* ---------- top bar ---------- */
+  .nav{
+    position:sticky;top:0;z-index:50;
+    backdrop-filter:blur(14px) saturate(140%);
+    -webkit-backdrop-filter:blur(14px) saturate(140%);
+    background:rgba(11,12,13,.72);border-bottom:1px solid var(--line);
+  }
+  .nav-in{display:flex;align-items:center;gap:14px;height:62px}
+  .mark{display:flex;align-items:center;gap:9px;font-weight:600;letter-spacing:-.02em;font-size:16px}
+  .mark i{
+    width:20px;height:20px;border-radius:6px;display:block;
+    background:conic-gradient(from 140deg,var(--green),#1f8f63 55%,#0f5138);
+    box-shadow:0 0 0 1px var(--green-line);
+  }
+  .nav .spacer{flex:1}
+  .navlink{font-size:13.5px;font-weight:500;color:var(--ink-2);padding:7px 11px;border-radius:var(--r-sm);transition:color .16s,background .16s}
+  .navlink:hover{color:var(--ink);background:var(--raise-2)}
+  .live{
+    display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;
+    text-transform:uppercase;letter-spacing:1.1px;color:var(--ink-2);
+    border:1px solid var(--green-line);background:var(--green-dim);
+    padding:6px 11px;border-radius:var(--pill);white-space:nowrap;
+  }
+  .live.plain{border-color:var(--line-2);background:transparent;color:var(--ink-3)}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(62,207,142,.5);animation:pulse 2.4s ease-out infinite}
+  .live.plain .dot{background:var(--ink-3);animation:none}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(62,207,142,.5)}70%{box-shadow:0 0 0 7px rgba(62,207,142,0)}100%{box-shadow:0 0 0 0 rgba(62,207,142,0)}}
+
+  /* ---------- hero ---------- */
+  .hero{padding:84px 0 48px}
+  .eyebrow{
+    font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:1.6px;
+    color:var(--ink-3);display:flex;align-items:center;gap:10px;margin-bottom:26px;flex-wrap:wrap;
+  }
+  .eyebrow b{color:var(--green);font-weight:500}
+  .eyebrow s{width:26px;height:1px;background:var(--line-3);text-decoration:none;display:inline-block}
+  h1{margin:0;font-size:clamp(40px,6.2vw,76px);line-height:1;font-weight:600;letter-spacing:-.035em;max-width:15ch}
+  h1 em{font-style:normal;color:var(--green)}
+  .lede{margin:26px 0 0;font-size:clamp(16px,1.5vw,18.5px);line-height:1.62;color:var(--ink-2);max-width:62ch;font-weight:300}
+  .lede b{color:var(--ink);font-weight:500}
+  .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:34px}
+  .btn{
+    display:inline-flex;align-items:center;gap:9px;font-size:14px;font-weight:500;
+    padding:11px 22px;border-radius:var(--pill);border:1px solid var(--line-3);
+    color:var(--ink);transition:.16s ease;background:transparent;cursor:pointer;
+  }
+  .btn:hover{border-color:var(--ink-2);background:var(--raise-2)}
+  .btn.solid{background:#f4f5f5;color:#0b0c0d;border-color:#f4f5f5}
+  .btn.solid:hover{background:#fff;border-color:#fff}
+  .btn.ghost{color:var(--ink-2)}
+  .btn svg{width:14px;height:14px;flex:none}
+
+  /* ---------- grip gauge ---------- */
+  .gauge{
+    margin-top:56px;border:1px solid var(--line);border-radius:var(--r-lg);
+    background:linear-gradient(180deg,var(--raise) 0%,rgba(18,20,21,.45) 100%);
+    padding:26px 26px 22px;
+  }
+  .gauge-head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .gauge-name{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:1.3px;color:var(--ink-3)}
+  .gauge-val{font-size:44px;font-weight:500;letter-spacing:-.03em;line-height:1;margin-top:10px;font-variant-numeric:tabular-nums}
+  .gauge-val small{font-size:14px;color:var(--ink-3);font-weight:400;letter-spacing:0;margin-left:8px}
+  .gauge-state{
+    font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:1.1px;
+    padding:6px 11px;border-radius:var(--pill);border:1px solid var(--line-3);color:var(--ink-2);
+  }
+  .gauge-state.mint{border-color:var(--green-line);background:var(--green-dim);color:var(--green)}
+  .gauge-state.burn{border-color:var(--burn-line);background:var(--burn-dim);color:var(--burn)}
+
+  .track{position:relative;height:12px;margin:26px 0 0;border-radius:var(--pill);background:var(--raise-2);border:1px solid var(--line);overflow:hidden}
+  .zone{position:absolute;top:0;bottom:0;transition:width .5s ease}
+  .zone.burn{left:0;background:linear-gradient(90deg,rgba(248,113,113,.34),rgba(248,113,113,.08))}
+  .zone.hold{background:#1d2022}
+  .zone.mint{right:0;background:linear-gradient(90deg,rgba(62,207,142,.08),rgba(62,207,142,.4))}
+  .needle{position:absolute;top:-5px;bottom:-5px;width:2px;background:var(--ink);border-radius:2px;box-shadow:0 0 12px rgba(255,255,255,.45);transition:left .7s cubic-bezier(.2,.8,.2,1)}
+  .needle::after{content:"";position:absolute;left:-4px;top:-6px;width:10px;height:10px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 3px rgba(11,12,13,.9)}
+  .scale{display:flex;justify-content:space-between;margin-top:12px;font-family:var(--mono);font-size:10.5px;color:var(--ink-4);letter-spacing:.6px}
+  .scale span.hot{color:var(--green)}
+  .scale span.hotb{color:var(--burn)}
+
+  /* ---------- metrics ---------- */
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:14px 0 0}
+  .card{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--raise);padding:20px 20px 18px;transition:border-color .18s,background .18s}
+  .card:hover{border-color:var(--line-3);background:var(--raise-2)}
+  .card .k{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink-3);display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .card .v{font-size:26px;font-weight:500;letter-spacing:-.02em;margin-top:12px;line-height:1.15;font-variant-numeric:tabular-nums}
+  .card .v small{font-size:12px;color:var(--ink-3);font-weight:400;margin-left:5px;letter-spacing:0}
+  .card .n{font-size:12.5px;color:var(--ink-3);margin-top:7px;line-height:1.45}
+  .pos{color:var(--green)}
+  .neg{color:var(--burn)}
+
+  /* ---------- sections ---------- */
+  section{padding:68px 0}
+  .shead{display:flex;align-items:baseline;justify-content:space-between;gap:20px;margin-bottom:20px;flex-wrap:wrap}
+  .shead h2{margin:0;font-size:22px;font-weight:500;letter-spacing:-.02em}
+  .shead p{margin:0;color:var(--ink-3);font-size:12.5px;font-family:var(--mono);letter-spacing:.3px}
+  .panel{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--raise);overflow:hidden}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:15px 20px;border-bottom:1px solid var(--line)}
+  .legend{display:flex;gap:16px;font-family:var(--mono);font-size:10.5px;color:var(--ink-3);letter-spacing:.8px;text-transform:uppercase}
+  .legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:middle}
+
+  #chart{display:block;width:100%;height:auto}
+  .gridline{stroke:#242a2d;stroke-width:1}
+  .axis{fill:var(--ink-4);font-family:var(--mono);font-size:10.5px;letter-spacing:.5px}
+  .line-stroke{stroke:var(--green);stroke-width:2;fill:none;stroke-linejoin:round;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.6s cubic-bezier(.3,.9,.2,1) forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  .genesis-line{stroke:#3a3f42;stroke-width:1;stroke-dasharray:4 5}
+  .enddot{fill:var(--green);stroke:#0b0c0d;stroke-width:2}
+  .empty{fill:var(--ink-4);font-family:var(--mono);font-size:12px}
+
+  /* ledger */
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  th{text-align:left;font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:1.1px;color:var(--ink-4);font-weight:400;padding:11px 20px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:13px 20px;border-bottom:1px solid #191c1e;font-size:13.5px;color:var(--ink-2)}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr{transition:background .14s}
+  tbody tr:hover{background:var(--raise-2)}
+  td.num{font-family:var(--mono);font-size:12.5px;color:var(--ink);text-align:right}
+  td.ep{font-family:var(--mono);font-size:12.5px;color:var(--ink-3)}
+  .tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:1px;padding:4px 9px;border-radius:var(--pill);border:1px solid var(--line-3);color:var(--ink-2)}
+  .tag.mint{color:var(--green);border-color:var(--green-line);background:var(--green-dim)}
+  .tag.burn{color:var(--burn);border-color:var(--burn-line);background:var(--burn-dim)}
+  .tag.hold{color:var(--ink-3)}
+  .tag .do{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block}
+
+  /* rules + params */
+  .split{display:grid;grid-template-columns:1.12fr .88fr;gap:14px}
+  .rulecard{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--raise);padding:24px}
+  .rulecard h3{margin:0 0 18px;font-size:13.5px;font-weight:500;color:var(--ink-2);letter-spacing:-.01em}
+  .step{display:grid;grid-template-columns:34px 1fr;gap:16px;padding:16px 0;border-top:1px solid var(--line)}
+  .step:first-of-type{border-top:0;padding-top:0}
+  .step .n{font-family:var(--mono);font-size:11px;color:var(--ink-4);letter-spacing:1px;padding-top:3px}
+  .step b{display:block;font-size:14.5px;font-weight:500;color:var(--ink);margin-bottom:5px;letter-spacing:-.01em}
+  .step p{margin:0;font-size:13.5px;color:var(--ink-3);line-height:1.62}
+  .step p code{font-family:var(--mono);font-size:12px;color:var(--green);background:var(--green-dim);padding:1px 6px;border-radius:4px}
+  .kv{display:flex;justify-content:space-between;gap:16px;padding:11px 0;border-top:1px solid var(--line);font-size:13px}
+  .kv:first-of-type{border-top:0;padding-top:0}
+  .kv span{color:var(--ink-3)}
+  .kv b{font-weight:400;font-family:var(--mono);font-size:12.5px;color:var(--ink)}
+
+  /* verify */
+  .verify{display:grid;grid-template-columns:1.08fr .92fr;gap:14px}
+  pre{margin:0;padding:20px;background:#0e1011;border:1px solid var(--line);border-radius:var(--r-lg);overflow-x:auto;font-family:var(--mono);font-size:11.5px;line-height:1.8;color:#a9b0b3}
+  pre .c{color:var(--ink-4)}
+  pre .s{color:var(--green)}
+  .copy{font-family:var(--mono);font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-3);background:transparent;border:1px solid var(--line-2);border-radius:var(--pill);padding:5px 12px;cursor:pointer;transition:.15s}
+  .copy:hover{color:var(--ink);border-color:var(--line-3)}
+
+  footer{border-top:1px solid var(--line);padding:34px 0 60px;margin-top:20px}
+  .foot{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;align-items:center}
+  .foot .l{font-size:12.5px;color:var(--ink-3);line-height:1.75}
+  .foot .l b{color:var(--ink-2);font-weight:500}
+  .addr{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);border:1px solid var(--line-2);border-radius:var(--pill);padding:6px 12px;transition:.15s}
+  .addr:hover{border-color:var(--green-line);color:var(--green)}
+
+  .err{display:none;margin-top:16px;font-family:var(--mono);font-size:11.5px;color:var(--burn);border:1px solid var(--burn-line);background:var(--burn-dim);border-radius:var(--r-md);padding:10px 14px}
+  .err.on{display:block}
+
+  @media (max-width:940px){
+    .metrics{grid-template-columns:repeat(2,1fr)}
+    .split,.verify{grid-template-columns:1fr}
+    .hero{padding:60px 0 36px}
+  }
+  @media (max-width:600px){
+    .navlink.hide{display:none}
+    .card .v{font-size:22px}
+    .gauge-val{font-size:34px}
+    th,td{padding-left:14px;padding-right:14px}
+    .hide-sm{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+    .line-stroke{stroke-dashoffset:0}
+  }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div>
-      <div class="brand">GRIP<span>.</span></div>
-      <div class="sub">A token whose supply follows how much of its live float the community keeps locked. No owner mint, no pause, no setters.</div>
-    </div>
-    <div style="text-align:right">
-      <div class="addr" id="addr">loading…</div>
-      <div class="addr" id="epochline"></div>
-    </div>
-  </header>
+<div class="aura"></div>
+<div class="shell">
 
-  <div class="cards">
-    <div class="card">
-      <div class="k">Supply</div>
-      <div class="v" id="supply">—</div>
-      <div class="n" id="supplynote">of 10,000,000 at genesis</div>
+  <nav class="nav">
+    <div class="wrap nav-in">
+      <a class="mark" href="#top"><i></i>GRIP</a>
+      <span class="live"><span class="dot"></span>testnet</span>
+      <div class="spacer"></div>
+      <a class="navlink hide" href="#mechanic">Mechanic</a>
+      <a class="navlink hide" href="#ledger">Ledger</a>
+      <a class="navlink hide" href="#verify">Verify</a>
+      <a class="navlink" href="https://github.com/farhanqaz/grip-memecoin" target="_blank" rel="noreferrer">Repo ↗</a>
     </div>
-    <div class="card">
-      <div class="k">Grip</div>
-      <div class="v" id="grip">—</div>
-      <div class="gripbar"><i id="gripfill" style="width:0"></i></div>
-      <div class="n" id="gripnote">locked / live float</div>
-    </div>
-    <div class="card">
-      <div class="k">Locked</div>
-      <div class="v" id="locked">—</div>
-      <div class="n" id="lockednote">reserve held by the contract</div>
-    </div>
-    <div class="card">
-      <div class="k">Epochs</div>
-      <div class="v" id="epoch">—</div>
-      <div class="n"><span id="mints">0</span> mint · <span id="burns">0</span> burn</div>
-    </div>
+  </nav>
+
+  <div class="wrap" id="top">
+
+    <header class="hero">
+      <div class="eyebrow"><b>NEP-141</b><s></s>NEAR HACKATHON 2026<s></s>MEMECOINS WITH MECHANICS</div>
+      <h1>Supply follows <em>grip</em>.</h1>
+      <p class="lede">
+        Every memecoin's supply is set by its deployer. Here it is set by the one thing a community controls:
+        how much of the live float it keeps locked. <b>Lock 60% and the token mints</b>, paid to the lockers.
+        <b>Fall under 35% and it burns</b>, out of a reserve the contract owns — never out of holders' pockets.
+        No owner mint, no pause, no setters.
+      </p>
+      <div class="cta">
+        <a class="btn solid" href="https://github.com/farhanqaz/grip-memecoin" target="_blank" rel="noreferrer">
+          <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+          Read the contract
+        </a>
+        <a class="btn ghost" id="explorerBtn" href="#verify">Explorer ↗</a>
+        <a class="btn ghost" href="#mechanic">How it works</a>
+      </div>
+
+      <div class="gauge">
+        <div class="gauge-head">
+          <div>
+            <div class="gauge-name">Grip · locked share of live float</div>
+            <div class="gauge-val" id="gripVal">—<small id="gripAbs"></small></div>
+          </div>
+          <div class="gauge-state" id="gripState">reading chain…</div>
+        </div>
+        <div class="track">
+          <div class="zone burn" id="zoneBurn" style="width:35%"></div>
+          <div class="zone hold" id="zoneHold"></div>
+          <div class="zone mint" id="zoneMint" style="width:40%"></div>
+          <div class="needle" id="needle" style="left:0%"></div>
+        </div>
+        <div class="scale">
+          <span>0%</span>
+          <span class="hotb">burn ≤ 35%</span>
+          <span>hold</span>
+          <span class="hot">mint ≥ 60%</span>
+          <span>100%</span>
+        </div>
+      </div>
+
+      <div class="metrics">
+        <div class="card">
+          <div class="k"><span>SUPPLY</span><span style="color:var(--ink-4)">GRIP</span></div>
+          <div class="v" id="supply">—</div>
+          <div class="n" id="supplyNote">reading chain…</div>
+        </div>
+        <div class="card">
+          <div class="k"><span>LOCKED</span><span style="color:var(--ink-4)">PRINCIPAL</span></div>
+          <div class="v" id="locked">—</div>
+          <div class="n" id="lockedNote">under lock</div>
+        </div>
+        <div class="card">
+          <div class="k"><span>RESERVE</span><span style="color:var(--ink-4)">BURN BUDGET</span></div>
+          <div class="v" id="reserve">—</div>
+          <div class="n" id="reserveNote">contract-owned</div>
+        </div>
+        <div class="card">
+          <div class="k"><span>EPOCHS</span><span style="color:var(--ink-4)" id="epochLen">—</span></div>
+          <div class="v" id="epoch">—</div>
+          <div class="n" id="epochNote">no epochs yet</div>
+        </div>
+      </div>
+      <div class="err" id="err"></div>
+    </header>
+
+    <section id="chart-section">
+      <div class="shead">
+        <h2>Supply, epoch by epoch</h2>
+        <p id="chartMeta">reading chain…</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div class="legend">
+            <span><i style="background:var(--green)"></i>total supply</span>
+            <span><i style="background:#3a3f42"></i>genesis</span>
+            <span class="hide-sm" id="legendMints">—</span>
+          </div>
+          <span class="live plain"><span class="dot"></span>live from contract state</span>
+        </div>
+        <svg id="chart" viewBox="0 0 1100 340" role="img" aria-label="Supply per epoch"></svg>
+      </div>
+    </section>
+
+    <section id="mechanic">
+      <div class="shead">
+        <h2>The whole rule</h2>
+        <p>evaluated once per epoch · permissionless</p>
+      </div>
+      <div class="split">
+        <div class="rulecard">
+          <h3>What happens at an epoch boundary</h3>
+          <div class="step">
+            <div class="n">01</div>
+            <div>
+              <b>Locks that reached their deadline release first</b>
+              <p>Grip has to be maintained, not set once. An untouched lock stops counting before the rule is
+              evaluated, so a passive holder cannot freeze the metric above target forever.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="n">02</div>
+            <div>
+              <b>Grip ≥ 60% → mint 1% of supply</b>
+              <p>Paid pro-rata to whoever is locked, and paid out <i>unlocked</i>: the locked total always equals
+              the sum of positions, so rewards never inflate the principal that earns them.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="n">03</div>
+            <div>
+              <b>Grip ≤ 35% → burn 2% of supply</b>
+              <p>Drawn only from the contract-owned reserve. When the reserve is spent, the epoch records
+              <code>hold</code> instead — the burn budget is finite by construction.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="n">04</div>
+            <div>
+              <b>Anyone can call it</b>
+              <p><code>tick()</code> is permissionless and unblockable. No admin key, no pause, no upgrade path:
+              after <code>new()</code> the deployer has no power over the numbers.</p>
+            </div>
+          </div>
+        </div>
+        <div class="rulecard">
+          <h3>Parameters, fixed at deployment</h3>
+          <div class="kv"><span>genesis</span><b>10,000,000 GRIP</b></div>
+          <div class="kv"><span>reserve</span><b>30% of genesis</b></div>
+          <div class="kv"><span>mint target</span><b id="pMint">60%</b></div>
+          <div class="kv"><span>burn target</span><b id="pBurn">35%</b></div>
+          <div class="kv"><span>mint per epoch</span><b id="pMintRate">1%</b></div>
+          <div class="kv"><span>burn per epoch</span><b id="pBurnRate">2%</b></div>
+          <div class="kv"><span>early-exit burn</span><b id="pEarly">10% of lock</b></div>
+          <div class="kv"><span>epoch length</span><b id="pEpoch">—</b></div>
+          <div class="kv"><span>max concurrent lockers</span><b>32</b></div>
+          <div class="kv"><span>standard</span><b>NEP-141</b></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="ledger">
+      <div class="shead">
+        <h2>Epoch ledger</h2>
+        <p id="ledgerMeta">straight from get_state</p>
+      </div>
+      <div class="panel">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:70px">EPOCH</th>
+              <th style="width:170px">ACTION</th>
+              <th style="width:130px">AMOUNT</th>
+              <th style="width:100px" class="hide-sm">GRIP</th>
+              <th style="text-align:right">SUPPLY AFTER</th>
+              <th style="text-align:right" class="hide-sm">TIME</th>
+            </tr>
+          </thead>
+          <tbody id="ledgerBody">
+            <tr><td colspan="6" style="color:var(--ink-4);font-family:var(--mono);font-size:12px">reading chain…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="verify">
+      <div class="shead">
+        <h2>Verify without trusting this page</h2>
+        <p>one curl · no SDK · no indexer</p>
+      </div>
+      <div class="verify">
+        <div>
+          <div class="panel-head" style="padding:0 0 12px;border:0">
+            <span class="legend"><span>public JSON-RPC</span></span>
+            <button class="copy" id="copyBtn">copy</button>
+          </div>
+          <pre id="curl"></pre>
+        </div>
+        <div class="rulecard">
+          <h3>What you are looking at</h3>
+          <div class="step" style="border:0;padding:0">
+            <div class="n">→</div>
+            <div>
+              <b>Contract</b>
+              <p><a id="contractLink" href="#" target="_blank" rel="noreferrer" style="color:var(--green);font-family:var(--mono);font-size:12.5px">—</a></p>
+            </div>
+          </div>
+          <div class="step" style="border-top:1px solid var(--line);padding-bottom:0">
+            <div class="n">→</div>
+            <div>
+              <b>Every number is a field of <code>get_state</code></b>
+              <p>The chart is the contract's own history array, not a separate index. Nothing on this page is
+              stored: reload it and it re-reads the chain.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="foot">
+        <div class="l">
+          <b>GRIP</b> · NEP-141 on NEAR testnet · built at NEAR HACKATHON 2026<br />
+          Track: memecoins · MIT licensed · contract and 60-epoch supply study in the repo
+        </div>
+        <a class="addr" id="footAddr" href="#" target="_blank" rel="noreferrer">—</a>
+      </div>
+    </footer>
   </div>
-
-  <div class="rule">
-    <div class="mint"><b>grip ≥ 60%</b> at the epoch boundary → mint <b>1%</b> of supply, pro-rata to whoever is locked.</div>
-    <div class="burn"><b>grip ≤ 35%</b> → burn <b>2%</b> of supply out of the reserve. It can never be taken from holders.</div>
-  </div>
-
-  <h2>Supply, every epoch on chain</h2>
-  <div class="panel"><svg id="chart" viewBox="0 0 900 260" preserveAspectRatio="none"></svg></div>
-
-  <h2>Epoch log</h2>
-  <div class="panel" style="padding:8px 10px">
-    <table><thead><tr><th>#</th><th>action</th><th>grip</th><th>supply</th><th>at</th></tr></thead>
-    <tbody id="log"><tr><td colspan="5" style="color:var(--dim)">reading chain…</td></tr></tbody></table>
-  </div>
-
-  <h2>Verify it yourself</h2>
-  <div class="grid2">
-    <div class="panel"><pre id="curl">curl</pre></div>
-    <div class="panel">
-      <p style="margin-bottom:8px">Nothing here is granted by a server. The page reads the contract over public JSON-RPC, and the same numbers come back from the contract above.</p>
-      <p style="margin:0" class="err" id="err"></p>
-    </div>
-  </div>
-
-  <h2>Parameters, fixed at deployment</h2>
-  <div class="panel"><table><tbody id="params"></tbody></table></div>
 </div>
 
 <script>
 const qs = new URLSearchParams(location.search);
-// ?contract=<account> and ?rpc=<url> let you point this page at any deployment of the same wasm.
+// ?contract=<account> and ?rpc=<url> point this page at any deployment of the same wasm.
 const RPC = qs.get('rpc') || 'https://rpc.testnet.fastnear.com';
-const CONTRACT = qs.get('contract') || 'grip-1682a584.testnet';
+const CONTRACT = qs.get('contract') || 'grip5391e9.grip-21a10e2e.testnet';
+const GENESIS = 10000000;
 
-const fmt = (raw) => (Number(BigInt(raw) / 10n ** 12n) / 1e6).toLocaleString('en-US', { maximumFractionDigits: 2 });
+const $ = (id) => document.getElementById(id);
+const dec = (raw) => Number(BigInt(raw) / 10n ** 12n) / 1e6;
+const num = (n, d) => n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 const pct = (bps) => (bps / 100).toFixed(1) + '%';
+const compact = (n) => (n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1) + 'k' : n.toFixed(0));
+const secs = (ns) => {
+  const s = Number(ns) / 1e9;
+  return s >= 3600 ? (s / 3600).toFixed(0) + 'h' : s >= 60 ? (s / 60).toFixed(0) + 'm' : s.toFixed(0) + 's';
+};
 
 async function rpc(method, params) {
   const res = await fetch(RPC, {
@@ -134,95 +495,181 @@ async function rpc(method, params) {
   return body.result;
 }
 
-async function view(method, args = {}) {
-  const b64 = btoa(JSON.stringify(args));
+async function view(method, args) {
   const r = await rpc('query', {
-    request_type: 'call_function', finality: 'final',
-    account_id: CONTRACT, method_name: method, args_base64: b64,
+    request_type: 'call_function',
+    finality: 'final',
+    account_id: CONTRACT,
+    method_name: method,
+    args_base64: btoa(JSON.stringify(args || {})),
   });
-  if (r.result === undefined) throw new Error('no result');
+  if (r.result === undefined) throw new Error('no result from ' + method);
   return JSON.parse(new TextDecoder().decode(new Uint8Array(r.result)));
 }
 
-function drawChart(history, genesis) {
-  const svg = document.getElementById('chart');
-  if (!history.length) { svg.innerHTML = '<text x="10" y="40" fill="#6b7280" font-size="13">no epochs yet</text>'; return; }
-  const W = 900, H = 260, pad = 34;
-  const vals = history.map(h => Number(BigInt(h.supply) / 10n ** 12n) / 1e6);
-  // scale to the data, with genesis always in frame, and 0.5% breathing room
-  const base = Math.min(...vals, genesis), top = Math.max(...vals, genesis);
-  const padPct = Math.max((top - base) * 0.08, base * 0.001);
-  const lo = base - padPct, hi = top + padPct;
-  const x = i => pad + (i * (W - pad * 2)) / Math.max(1, history.length - 1);
-  const y = v => H - pad - ((v - lo) / (hi - lo || 1)) * (H - pad * 2);
-  const line = vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-  const area = `${line} L${x(vals.length - 1)},${H - pad} L${pad},${H - pad} Z`;
-  const gy = y(genesis);
-  svg.innerHTML = `
-    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#4ade80" stop-opacity=".28"/><stop offset="100%" stop-color="#4ade80" stop-opacity="0"/>
-    </linearGradient></defs>
-    <line x1="${pad}" y1="${gy}" x2="${W - pad}" y2="${gy}" stroke="#2b3138" stroke-dasharray="4 4"/>
-    <text x="${pad}" y="${gy - 6}" fill="#6b7280" font-size="11" font-family="monospace">genesis 10,000,000</text>
-    <path d="${area}" fill="url(#g)"/>
-    <path d="${line}" fill="none" stroke="#4ade80" stroke-width="2.2" stroke-linejoin="round"/>
-    <circle cx="${x(vals.length - 1)}" cy="${y(vals[vals.length - 1])}" r="4" fill="#4ade80"/>`;
+/* ---------------- chart ---------------- */
+function drawChart(history) {
+  const svg = $('chart');
+  const W = 1100, H = 340, L = 94, R = 28, T = 26, B = 42;
+  if (!history.length) {
+    svg.innerHTML = '<text x="94" y="62" class="empty">no epochs yet — the rule fires when someone calls tick()</text>';
+    return;
+  }
+
+  const series = history.map((h) => ({ e: h.epoch, v: dec(h.supply) }));
+  const vals = series.map((s) => s.v);
+  const lo0 = Math.min.apply(null, vals.concat([GENESIS]));
+  const hi0 = Math.max.apply(null, vals.concat([GENESIS]));
+  const padv = Math.max((hi0 - lo0) * 0.16, hi0 * 0.0025);
+  const lo = lo0 - padv, hi = hi0 + padv;
+
+  const x = (i) => L + (i * (W - L - R)) / Math.max(1, series.length - 1);
+  const y = (v) => H - B - ((v - lo) / (hi - lo || 1)) * (H - T - B);
+
+  const line = series.map((s, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(s.v).toFixed(1)).join(' ');
+  const area = line + ' L' + x(series.length - 1).toFixed(1) + ',' + (H - B) + ' L' + L + ',' + (H - B) + ' Z';
+
+  let grid = '';
+  for (let i = 0; i <= 4; i += 1) {
+    const v = lo + ((hi - lo) * i) / 4;
+    const yy = y(v).toFixed(1);
+    grid += '<line class="gridline" x1="' + L + '" y1="' + yy + '" x2="' + (W - R) + '" y2="' + yy + '"/>';
+    grid += '<text class="axis" x="' + (L - 14) + '" y="' + (Number(yy) + 3.5) + '" text-anchor="end">' + compact(v) + '</text>';
+  }
+
+  const idx = [0, Math.floor((series.length - 1) / 2), series.length - 1].filter((v, i, a) => a.indexOf(v) === i);
+  const xticks = idx.map((i) =>
+    '<text class="axis" x="' + x(i).toFixed(1) + '" y="' + (H - B + 24) + '" text-anchor="middle">ep ' + series[i].e + '</text>').join('');
+
+  const gy = y(GENESIS).toFixed(1);
+  const lastPoint = series[series.length - 1];
+
+  svg.innerHTML =
+    '<defs><linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0%" stop-color="#3ecf8e" stop-opacity=".26"/>' +
+      '<stop offset="70%" stop-color="#3ecf8e" stop-opacity=".04"/>' +
+      '<stop offset="100%" stop-color="#3ecf8e" stop-opacity="0"/>' +
+    '</linearGradient></defs>' +
+    grid +
+    '<line class="genesis-line" x1="' + L + '" y1="' + gy + '" x2="' + (W - R) + '" y2="' + gy + '"/>' +
+    '<text class="axis" x="' + (W - R) + '" y="' + (Number(gy) - 8) + '" text-anchor="end">genesis ' + compact(GENESIS) + '</text>' +
+    '<path d="' + area + '" fill="url(#fill)"/>' +
+    '<path class="line-stroke" pathLength="1" d="' + line + '"/>' +
+    '<circle class="enddot" cx="' + x(series.length - 1).toFixed(1) + '" cy="' + y(lastPoint.v).toFixed(1) + '" r="4.5"/>' +
+    xticks;
+}
+
+/* ---------------- render ---------------- */
+let last = null;
+
+function render(s) {
+  const supply = dec(s.total_supply);
+  const locked = dec(s.total_locked);
+  const reserve = dec(s.reserve);
+  const grip = s.locked_share_bps;
+  const float = Math.max(1, supply - reserve);
+
+  $('gripVal').innerHTML = pct(grip) + '<small>' + num(locked, 0) + ' GRIP locked</small>';
+  const needlePct = Math.min(99.2, Math.max(0.8, grip / 100));
+  $('needle').style.left = 'calc(' + needlePct + '% - 1px)';
+
+  const minting = grip >= s.lock_target_bps;
+  const burning = grip <= s.burn_target_bps;
+  const st = $('gripState');
+  st.className = 'gauge-state ' + (minting ? 'mint' : burning ? 'burn' : '');
+  st.textContent = minting ? 'minting · above target' : burning ? 'burning · below target' : 'holding · inside the band';
+
+  $('zoneBurn').style.width = (s.burn_target_bps / 100) + '%';
+  $('zoneMint').style.width = (100 - s.lock_target_bps / 100) + '%';
+  $('zoneHold').style.left = (s.burn_target_bps / 100) + '%';
+  $('zoneHold').style.width = ((s.lock_target_bps - s.burn_target_bps) / 100) + '%';
+
+  $('supply').innerHTML = num(supply, 2) + '<small>GRIP</small>';
+  const delta = (supply / GENESIS - 1) * 100;
+  $('supplyNote').innerHTML =
+    '<span class="' + (delta >= 0 ? 'pos' : 'neg') + '">' + (delta >= 0 ? '+' : '') + delta.toFixed(2) + '%</span> vs genesis 10,000,000';
+
+  $('locked').innerHTML = num(locked, 0) + '<small>GRIP</small>';
+  $('lockedNote').textContent = num((locked / float) * 100, 1) + '% of live float';
+
+  $('reserve').innerHTML = num(reserve, 0) + '<small>GRIP</small>';
+  $('reserveNote').textContent = num((reserve / supply) * 100, 1) + '% of supply left to burn';
+
+  $('epoch').textContent = s.epoch;
+  $('epochLen').textContent = secs(s.epoch_length_ns);
+  $('epochNote').innerHTML =
+    '<span class="pos">' + s.mint_epochs + ' mint</span> · <span class="neg">' + s.burn_epochs + ' burn</span> · ' +
+    (s.expired_locks || 0) + ' expired';
+
+  $('pMint').textContent = pct(s.lock_target_bps);
+  $('pBurn').textContent = pct(s.burn_target_bps);
+  $('pMintRate').textContent = pct(s.mint_bps);
+  $('pBurnRate').textContent = pct(s.burn_bps);
+  $('pEarly').textContent = pct(s.early_exit_bps) + ' of lock';
+  $('pEpoch').textContent = secs(s.epoch_length_ns) + ' (demo instance)';
+
+  drawChart(s.history);
+  const n = s.history.length;
+  $('chartMeta').textContent = n
+    ? n + ' epochs recorded · ep ' + s.history[0].epoch + ' → ' + s.history[n - 1].epoch
+    : '0 epochs recorded';
+  $('legendMints').textContent = s.mint_epochs + ' mint / ' + s.burn_epochs + ' burn';
+
+  const rows = s.history.slice().reverse().slice(0, 10).map((h) => {
+    const parts = h.action.split(' ');
+    const kind = ['mint', 'burn', 'hold'].indexOf(parts[0]) >= 0 ? parts[0] : 'hold';
+    return '<tr>' +
+      '<td class="ep">' + h.epoch + '</td>' +
+      '<td><span class="tag ' + kind + '"><span class="do"></span>' + kind + '</span></td>' +
+      '<td class="num">' + (parts[1] ? num(dec(parts[1]), 2) : '—') + '</td>' +
+      '<td class="num hide-sm">' + pct(h.share_bps) + '</td>' +
+      '<td class="num">' + num(dec(h.supply), 2) + '</td>' +
+      '<td class="num hide-sm" style="color:var(--ink-3)">' + new Date(Number(h.timestamp) / 1e6).toLocaleTimeString() + '</td>' +
+    '</tr>';
+  }).join('');
+  $('ledgerBody').innerHTML = rows || '<tr><td colspan="6" style="color:var(--ink-4);font-family:var(--mono);font-size:12px">no epochs yet</td></tr>';
+  $('ledgerMeta').textContent = 'last ' + Math.min(10, n) + ' of ' + n + ' · from get_state';
+
+  $('curl').innerHTML =
+    '<span class="c"># one call, no wallet, no SDK</span>\n' +
+    'curl -s https://rpc.testnet.fastnear.com -X POST \\\n' +
+    '  -H <span class="s">\'Content-Type: application/json\'</span> \\\n' +
+    '  -d <span class="s">\'{"jsonrpc":"2.0","id":"1","method":"query",\n' +
+    '       "params":{"request_type":"call_function","finality":"final",\n' +
+    '       "account_id":"' + CONTRACT + '","method_name":"get_state",\n' +
+    '       "args_base64":"e30="}}\'</span>';
+
+  const explorer = 'https://testnet.near.org/accounts/' + CONTRACT;
+  $('contractLink').textContent = CONTRACT;
+  $('contractLink').href = explorer;
+  $('footAddr').textContent = CONTRACT;
+  $('footAddr').href = explorer;
+  $('explorerBtn').href = explorer;
+  $('err').classList.remove('on');
+  last = s;
 }
 
 async function refresh() {
   try {
     const s = await view('get_state');
-    document.getElementById('addr').textContent = CONTRACT;
-    document.getElementById('supply').textContent = fmt(s.total_supply);
-    document.getElementById('supplynote').textContent = `${((Number(s.total_supply) / 10_000_000e18 - 1) * 100).toFixed(2)}% vs genesis`;
-    document.getElementById('grip').textContent = pct(s.locked_share_bps);
-    document.getElementById('gripfill').style.width = Math.min(100, s.locked_share_bps / 100) + '%';
-    document.getElementById('gripfill').style.background = s.locked_share_bps >= s.lock_target_bps ? 'var(--mint)' : s.locked_share_bps <= s.burn_target_bps ? 'var(--burn)' : 'var(--grip)';
-    document.getElementById('gripnote').textContent = `target ${pct(s.lock_target_bps)} mint · ${pct(s.burn_target_bps)} burn`;
-    document.getElementById('locked').textContent = fmt(s.total_locked);
-    document.getElementById('lockednote').textContent = `reserve ${fmt(s.reserve)} held by contract`;
-    document.getElementById('epoch').textContent = s.epoch;
-    document.getElementById('mints').textContent = s.mint_epochs;
-    document.getElementById('burns').textContent = s.burn_epochs;
-    document.getElementById('epochline').textContent = `epoch ${s.epoch} · ${(Number(s.epoch_length_ns) / 1e9).toFixed(0)}s each`;
-
-    drawChart(s.history, 10_000_000); // genesis in whole tokens, same units as the history array
-
-    const rows = [...s.history].reverse().slice(0, 12).map(h => {
-      const kind = h.action.split(' ')[0];
-      const amt = h.action.split(' ')[1];
-      return `<tr><td>${h.epoch}</td>
-        <td><span class="tag ${kind}">${kind}</span> ${amt ? fmt(amt) : ''}</td>
-        <td>${pct(h.share_bps)}</td><td>${fmt(h.supply)}</td>
-        <td>${new Date(Number(h.timestamp) / 1e6).toLocaleTimeString()}</td></tr>`;
-    });
-    document.getElementById('log').innerHTML = rows.join('') || '<tr><td colspan="5" style="color:var(--dim)">no epochs yet</td></tr>';
-
-    const params = [
-      ['genesis', '10,000,000 GRIP'],
-      ['reserve', pct(s.reserve === '0' ? 0 : (Number(s.reserve) / Number(s.total_supply) * 10000)) + ' of supply'],
-      ['lock target', pct(s.lock_target_bps)],
-      ['burn target', pct(s.burn_target_bps)],
-      ['mint per epoch', pct(s.mint_bps)],
-      ['burn per epoch', pct(s.burn_bps)],
-      ['early exit burn', pct(s.early_exit_bps)],
-      ['epoch length', (Number(s.epoch_length_ns) / 1e9).toFixed(0) + 's'],
-    ];
-    document.getElementById('params').innerHTML = params.map(([k, v]) =>
-      `<tr><td style="color:var(--dim)">${k}</td><td style="text-align:right">${v}</td></tr>`).join('');
-
-    document.getElementById('curl').textContent =
-`curl -s https://rpc.testnet.fastnear.com \\
-  -X POST -H 'Content-Type: application/json' \\
-  -d '{"jsonrpc":"2.0","id":"1","method":"query",
-   "params":{"request_type":"call_function",
-   "finality":"final","account_id":"${CONTRACT}",
-   "method_name":"get_state","args_base64":"e30="}}'`;
-    document.getElementById('err').textContent = '';
+    if (!last || last.epoch !== s.epoch || last.total_supply !== s.total_supply || last.total_locked !== s.total_locked) render(s);
   } catch (e) {
-    document.getElementById('err').textContent = 'read failed: ' + e.message;
+    const box = $('err');
+    box.textContent = 'read failed: ' + e.message;
+    box.classList.add('on');
   }
 }
+
+$('copyBtn').addEventListener('click', async () => {
+  const cmd = $('curl').textContent.replace(/^# .*\n/, '');
+  try {
+    await navigator.clipboard.writeText(cmd);
+    $('copyBtn').textContent = 'copied';
+    setTimeout(() => { $('copyBtn').textContent = 'copy'; }, 1600);
+  } catch (e) {
+    $('copyBtn').textContent = 'select manually';
+  }
+});
 
 refresh();
 setInterval(refresh, 6000);
