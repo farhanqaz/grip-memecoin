@@ -1,0 +1,46 @@
+name: keeper
+
+# The rule is permissionless, not autonomous: an epoch only advances when someone calls tick(). This
+# workflow is that someone, on GitHub's clock instead of a laptop's, so the demo keeps moving while the
+# machine that built it is asleep.
+#
+# It calls two public methods and nothing else: tick() when an epoch is due, and lock() when grip has
+# fallen under the mint target. The signing key has no power over the contract: there is no admin method,
+# no pause, no setter and no upgrade path, by construction.
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: keeper
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: install
+        working-directory: demo
+        run: npm install --no-audit --no-fund --silent
+
+      - name: tick, and re-lock if grip fell under target
+        working-directory: demo
+        env:
+          GRIP_SIGNER: ${{ secrets.GRIP_SIGNER_JSON }}
+        run: |
+          if [ -z "$GRIP_SIGNER" ]; then
+            echo "GRIP_SIGNER_JSON is not set; skipping. The contract is unaffected."
+            exit 0
+          fi
+          printf '%s' "$GRIP_SIGNER" > canonical-account.json
+          node auto.mjs
+          rm -f canonical-account.json
