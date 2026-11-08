@@ -10,7 +10,7 @@ live float its holders have locked. Lock up as a community and the token mints, 
 stayed. Fold, and it burns out of a fixed reserve. The deployer has no mint, no pause, and no setter.
 after deployment the only actor that decides supply is the community.
 
-Live on NEAR testnet: **[`grip5391e9.grip-21a10e2e.testnet`](https://testnet.nearblocks.io/address/grip5391e9.grip-21a10e2e.testnet)** ·
+Live on NEAR testnet: **[`grip5391e9.grip-21a10e2e.testnet`](https://testnet.nearblocks.io/address/grip5391e9.grip-21a10e2e.testnet)** (mirror: [near.rocks](https://near.rocks/address/grip5391e9.grip-21a10e2e.testnet)) ·
 dashboard: **[farhanqaz.github.io/grip-memecoin](https://farhanqaz.github.io/grip-memecoin/)** (source: [`docs/index.html`](docs/index.html)) ·
 one command check: **`./scripts/verify.sh`** · judge sheet: [`SUBMISSION.md`](SUBMISSION.md)
 

@@ -291,9 +291,9 @@
   footer .foot{width:14px;height:14px;display:block;opacity:.85}
 
   .err{
-    position:fixed;left:var(--gut);bottom:18px;z-index:40;display:none;
-    font-family:var(--mono);font-size:11px;color:var(--orange);
-    border:1px solid rgba(255,106,61,.35);background:rgba(255,106,61,.08);padding:8px 12px
+    position:fixed;left:var(--gut);right:var(--gut);bottom:16px;z-index:40;display:none;
+    font-family:var(--mono);font-size:11px;line-height:1.6;color:var(--orange);
+    border:1px solid rgba(255,106,61,.35);background:#140d0a;padding:10px 14px;max-width:760px
   }
   .err.on{display:block}
 
@@ -1024,7 +1024,10 @@
       if (!last || last.epoch !== s.epoch || last.total_supply !== s.total_supply || last.total_locked !== s.total_locked || last.locked_share_bps !== s.locked_share_bps) render(s);
     } catch (e) {
       const box = $('err');
-      box.textContent = 'chain read failed: ' + e.message;
+      const local = location.protocol === 'file:';
+      box.textContent = local
+        ? 'This page cannot read the chain from a file:// path, because browsers block cross-origin fetches there. Serve the folder instead: python3 -m http.server 8765, then open http://localhost:8765/'
+        : 'chain read failed: ' + e.message;
       box.classList.add('on');
     }
   };

@@ -9,8 +9,8 @@ An NEP-141 token on NEAR whose supply is a function of how much of its live floa
 | Live dashboard | https://farhanqaz.github.io/grip-memecoin/ |
 | Demo video (73s) | [`docs/demo.mp4`](docs/demo.mp4) |
 | Contract | `grip5391e9.grip-21a10e2e.testnet` |
-| Explorer | https://testnet.nearblocks.io/address/grip5391e9.grip-21a10e2e.testnet |
-| One command check | `./scripts/verify.sh` |
+| Explorer | https://testnet.nearblocks.io/address/grip5391e9.grip-21a10e2e.testnet (mirror: https://near.rocks/address/grip5391e9.grip-21a10e2e.testnet) |
+| One command check | `./scripts/verify.sh` (also proves the deployed contract answers) |
 | License | MIT |
 
 ## The problem
@@ -58,6 +58,21 @@ grip       1.75x    58     1     the community holds the line, supply expands, l
 churn      1.17x    20     2     roughly flat
 fold       0.86x    15    15     the reserve is spent down, supply contracts
 ```
+
+## Reading the chain without a browser
+
+Explorers render client-side and some of them block scripted fetches. The machine-checkable path is the
+RPC call that `scripts/verify.sh` already runs:
+
+```sh
+curl -s https://rpc.testnet.fastnear.com -X POST -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":"1","method":"query","params":{"request_type":"call_function",
+       "finality":"final","account_id":"grip5391e9.grip-21a10e2e.testnet",
+       "method_name":"get_state","args_base64":"e30="}}'
+```
+
+It returns supply, reserve, locked share, every fixed parameter and the last 90 epochs, with no browser
+and no key.
 
 ## Known limits, stated plainly
 
