@@ -15,3 +15,4 @@ demo/narration.mp3
 # public deployment key, kept out of git like the demo key
 demo/canonical-account.json
 demo/lines/
+__pycache__/
