@@ -28,7 +28,11 @@ function show(title, s) {
   console.log(`\n${title}`);
   console.log(`  supply ${fmt(s.total_supply)}  |  reserve ${fmt(s.reserve)}  |  locked ${fmt(s.total_locked)}  |  grip ${pct(s.locked_share_bps)}`);
   console.log(`  epoch ${s.epoch}  |  mint epochs ${s.mint_epochs}  |  burn epochs ${s.burn_epochs}`);
-  for (const h of s.history.slice(-4)) console.log(`    ep ${h.epoch}: ${h.action.padEnd(26)} share ${pct(h.share_bps)}  supply ${fmt(h.supply)}`);
+  for (const h of s.history.slice(-4)) {
+    const [kind, amount] = h.action.split(' ');
+    const label = amount ? `${kind} ${fmt(amount)}` : kind;
+    console.log(`    ep ${h.epoch}: ${label.padEnd(20)} share ${pct(h.share_bps)}  supply ${fmt(h.supply)}`);
+  }
 }
 
 // waitUntil: 'FINAL' matters here: the next line reads the state back, and a read right after an
@@ -63,9 +67,17 @@ for (const name of ['alice', 'bob', 'carol']) {
     console.log(`${subId} already exists (${e.message.slice(0, 60)})`);
   }
   const acct = new Account(subId, provider, actorKey.toString());
-  // top up so a rerun never stalls on gas
-  const bal = await provider.viewAccount({ accountId: subId });
-  if (BigInt(bal.amount) < NEAR) {
+  // A freshly created sub-account is not always visible to the node that answers the next request,
+  // so poll briefly before deciding whether a top-up is needed.
+  let bal = null;
+  for (let attempt = 0; attempt < 8 && bal === null; attempt += 1) {
+    try {
+      bal = await provider.viewAccount({ accountId: subId });
+    } catch {
+      await sleep(900);
+    }
+  }
+  if (bal && BigInt(bal.amount) < NEAR) {
     await owner.signAndSendTransaction({ receiverId: subId, actions: [actions.transfer(2n * NEAR)] });
     console.log(`  topped up ${subId} with 2 NEAR`);
   }

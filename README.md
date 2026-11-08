@@ -76,7 +76,7 @@ node keeper.mjs                          # ticks each due epoch; --once fits in 
 | [`sim/`](sim) | 60-epoch supply study; the parameters were picked from a 108-combination sweep | `python3 sim/sim.py` |
 | [`demo/`](demo) | testnet deploy, three scripted actors, and the keeper | `cd demo && npm run demo` |
 | [`docs/`](docs) | static dashboard, served by GitHub Pages; one HTML file, no build step, no SDK | open it |
-| [`tools/`](tools) | local RPC proxy for networks that cannot reach a NEAR RPC | `node tools/rpc-proxy.mjs` |
+| [`tools/`](tools) | RPC proxy, and the recorder + renderer that produced the demo video | `python3 tools/rec.py` |
 
 The study behind the numbers (60 epochs, 200 holders, fixed seeds, fully reproducible):
 
@@ -89,6 +89,13 @@ fold         0.90x    18    15     4
 
 Grip means the community holds 60%+ locked for the whole window: supply ends 75% higher and every token
 of it goes to lockers. Fold means it decays: the reserve is spent down and supply ends 10% lower.
+
+## The demo run
+
+The recorded run is [`demo/demo.mp4`](demo/demo.mp4) (68s, real testnet transactions). It is rebuilt, not
+acted out: `tools/rec.py` records the child process's own output with timestamps into `demo/demo.cast`, and
+`tools/cast2mp4.py` replays those timings into a video, so frame order and timing are whatever the run
+produced.
 
 ## Verify the deployment
 

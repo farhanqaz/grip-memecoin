@@ -8,3 +8,6 @@ demo/demo-account.json
 
 # local env
 .env
+
+# generated narration (rebuild with tools/rec.py + text-to-speech)
+demo/narration.mp3
