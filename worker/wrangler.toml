@@ -1,0 +1,26 @@
+# The keeper, as a Cloudflare cron trigger. Deploy with:
+#
+#   cd worker
+#   npx wrangler login                       # one browser click, no password shared with anyone
+#   npx wrangler secret put GRIP_SIGNER      # paste the SIGNER's JSON: {"accountId":"...","secretKey":"ed25519:..."}
+#   npx wrangler secret put TRIGGER_TOKEN    # any random string, for the /run endpoint
+#   npx wrangler deploy
+#
+# Cost: a 5 minute cron is 288 invocations a day, well inside the free tier's 100k. The account's own
+# NEAR pays the gas: a tick costs about 0.0003 NEAR, so 3.5 NEAR is roughly 11,000 ticks.
+
+name = "grip-keeper"
+main = "src/worker.js"
+compatibility_date = "2026-01-01"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+CONTRACT = "grip599cb0.grip-21a10e2e.testnet"
+SIGNER = "grip599cb0.grip-21a10e2e.testnet"
+RPC_URL = "https://rpc.testnet.fastnear.com"
+LOCK_EPOCHS = "30"
+
+[observability]
+enabled = true
