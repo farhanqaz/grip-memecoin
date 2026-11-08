@@ -8,6 +8,7 @@ this is a recording of a real run, not a rendering of a script.
 
 import json
 import subprocess
+from pathlib import Path
 import sys
 import time
 
@@ -27,7 +28,7 @@ with open(CAST, "w") as f:
         stderr=subprocess.STDOUT,
         text=True,
         bufsize=1,
-        cwd="/home/dell/projects/near-hackathon/demo",
+        cwd=str(Path(__file__).resolve().parent.parent / "demo"),
     )
     assert proc.stdout is not None
     for line in proc.stdout:

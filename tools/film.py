@@ -54,7 +54,8 @@ SERIF = str(FONTS / "fraunces-300_700-normal.woff2")
 SANS = str(FONTS / "archivo-400_600-normal.woff2")
 MONO = str(FONTS / "ibm-plex-mono-400-normal.woff2")
 
-EDGE_TTS = shutil.which("edge-tts") or "/home/dell/.hermes/installs/e67bdb6da4dcb61a/environments/db7524008aac4608b6adfb57193fe637/venv/bin/edge-tts"
+# edge-tts is only needed to regenerate the voice; the cached wavs in demo/lines/ are enough to re-cut
+EDGE_TTS = os.environ.get("EDGE_TTS") or shutil.which("edge-tts")
 
 # shot, source, line. `cast` entries carry the cast timestamp the sentence belongs to.
 SCRIPT = [
@@ -108,6 +109,9 @@ def synth(idx, text, fresh=False):
     CACHE.mkdir(parents=True, exist_ok=True)
     mp3, wav = CACHE / f"{idx:02d}.mp3", CACHE / f"{idx:02d}.wav"
     if fresh or not wav.exists():
+        if not EDGE_TTS:
+            raise SystemExit("edge-tts is not installed (pip install edge-tts), and demo/lines/ has no cached "
+                             "audio for this line. Set EDGE_TTS=/path/to/edge-tts, or run without --fresh.")
         # the edge endpoint drops requests now and then; a sentence is small enough to just ask again
         last = None
         for attempt in range(4):
