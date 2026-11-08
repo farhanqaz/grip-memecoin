@@ -439,7 +439,9 @@
         <div>
           <h3>Grip at 60% mints 1%</h3>
           <p>Paid pro rata to whoever is locked, and paid out unlocked. The locked total always equals the
-          sum of positions, so a reward never inflates the principal that earned it.</p>
+          sum of positions, so a reward never inflates the principal that earned it. The mint stops at
+          <code>4&times; genesis</code>: a percentage of the current supply compounds, and a rule with no
+          ceiling is a runaway by construction.</p>
         </div>
         <div class="cond">mint_bps = 100</div>
       </div>
