@@ -88,6 +88,9 @@
     }
     .stage{padding-top:88px}
     h1{max-width:11ch}
+    .actions{gap:14px 18px}
+    .btn{padding:13px 18px}
+    .txt{font-size:11.5px}
   }
 
   .kicker{
@@ -108,7 +111,8 @@
     color:#cfcabe;line-height:1.62;
   }
   .lede b{color:var(--ink);font-weight:500}
-  .actions{display:flex;align-items:center;gap:26px;margin-top:34px}
+  .actions{display:flex;align-items:center;gap:14px 26px;margin-top:34px;flex-wrap:wrap}
+  .btn,.txt{white-space:nowrap}
   .btn{
     display:inline-flex;align-items:center;gap:12px;
     background:var(--ink);color:#0b0b0a;border:0;border-radius:2px;
@@ -580,7 +584,7 @@
     mouseY += (targetMY - mouseY) * 0.05;
 
     cx0 = W * (W < 760 ? 0.5 : 0.64);
-    cy0 = H * (W < 760 ? 0.21 : 0.46);
+    cy0 = H * (W < 760 ? 0.185 : 0.46);
 
     const base = Math.min(W, H) * (W < 760 ? 0.23 : 0.31);
     const tight = 1.0 - 0.16 * gripNow;            // gripped: contracts
