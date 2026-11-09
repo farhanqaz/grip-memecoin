@@ -4,7 +4,7 @@ An NEP-141 token on NEAR whose supply is a function of how much of its live floa
 
 | | |
 | --- | --- |
-| Track | `memecoins` (also entered under `social`) |
+| Track | `memecoins` |
 | Repository | https://github.com/farhanqaz/grip-memecoin |
 | Live dashboard | https://farhanqaz.github.io/grip-memecoin/ |
 | Demo video (85s) | [`docs/demo.mp4`](docs/demo.mp4) |

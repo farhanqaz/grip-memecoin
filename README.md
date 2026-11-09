@@ -188,7 +188,7 @@ rounding dust.
 
 ## Built for NEAR HACKATHON
 
-Track: `memecoins` (with `social`). Built 1 to 14 Nov 2026.
+Track: `memecoins`. Built 1 to 14 Nov 2026.
 
 ## License
 
