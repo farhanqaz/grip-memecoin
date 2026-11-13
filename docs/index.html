@@ -152,6 +152,11 @@
   }
   .readout .cell:last-child{border-right:0}
   .readout .cell:not(.dial){padding-left:22px}
+  .life{
+    margin-top:16px;font-family:var(--mono);font-size:11px;letter-spacing:.05em;
+    color:var(--faint);line-height:1.5;
+  }
+  .life b{color:var(--muted);font-weight:400}
   .note{
     padding:10px 0 12px;max-width:118ch;
     font-family:var(--mono);font-size:10.5px;line-height:1.6;letter-spacing:.02em;color:var(--faint);
@@ -374,6 +379,7 @@
         <a class="txt" href="demo.mp4">Watch the run, 85s</a>
         <a class="txt" id="explorerTop" href="#" target="_blank" rel="noreferrer">Explorer</a>
       </div>
+      <p class="life" id="life">&nbsp;</p>
       </div>
 
       <div class="epochbar" aria-hidden="true"><i id="epochFill"></i></div>
@@ -410,7 +416,7 @@
         </div>
       </div>
       <p class="note">
-        <b>Public demo instance.</b> The locked share above is one scripted account, renewed every 5
+        <b>Public demo instance.</b> The locked share above is one scripted account, renewed every 10
         minutes by a keeper on Cloudflare, not organic demand. An epoch here is <b>60 seconds</b>, not the 86,400 a
         production deployment would use, so supply moves about 1,440x faster than it would in the wild.
         The rule is unchanged: no admin path exists, <b>lock()</b> and <b>tick()</b> are public methods.
@@ -949,12 +955,12 @@
     }
     // an epoch that is overdue is not a broken page: tick() is public, and this says so instead of
     // pretending a countdown is still running.
-    // the keeper runs every 5 minutes, so between runs an epoch can be overdue. Saying so beats a
+    // the keeper runs every 10 minutes, so between runs an epoch can be overdue. Saying so beats a
     // countdown that sits at zero and looks stalled.
     const sub = $('sEpoch');
     if (sub) sub.textContent = left > 0
       ? 'next in ' + Math.ceil(left / 1000) + 's'
-      : 'due · keeper runs every 5 min';
+      : 'due · keeper runs every 10 min';
   };
 
   const render = (s) => {
@@ -964,6 +970,13 @@
     const float = Math.max(1, supply - reserve);
     gripTarget = s.locked_share_bps / 10000;
     if (!gripInit) { gripNow = gripTarget; gripInit = true; }
+
+    const life = $('life');
+    if (life) {
+      const atCeiling = supply >= dec(s.max_supply);
+      life.innerHTML = s.epoch + ' epochs run · <b>' + s.mint_epochs + '</b> minted · <b>' +
+        s.burn_epochs + '</b> burned' + (atCeiling ? ' · supply at its 4&times; ceiling' : '');
+    }
 
     const flash = (id, changed) => {
       if (!changed) return;
@@ -995,7 +1008,11 @@
 
     const n = s.history.length;
     $('chartMeta').textContent = n ? n + ' epochs, ' + s.mint_epochs + ' mint, ' + s.burn_epochs + ' burn' : 'no epochs yet';
-    $('figNote').textContent = n ? 'last epoch ' + s.history[n - 1].epoch : 'genesis 10,000,000';
+    const tail = s.history.slice(-6);
+    const flatTail = n > 5 && tail.every((h) => /^(capped|hold)/.test(h.action || ''));
+    $('figNote').textContent = !n ? 'genesis 10,000,000'
+      : flatTail ? 'capped or hold for the last ' + n + ' epochs: the ceiling is doing its job'
+      : 'last epoch ' + s.history[n - 1].epoch;
 
     const rows = s.history.slice().reverse().slice(0, 9).map((h) => {
       const parts = (h.action || '').split(' ');
